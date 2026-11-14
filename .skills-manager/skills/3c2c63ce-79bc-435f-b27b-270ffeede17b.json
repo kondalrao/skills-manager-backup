@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3c2c63ce-79bc-435f-b27b-270ffeede17b",
+  "path": "task-observer",
+  "path_key": "task-observer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

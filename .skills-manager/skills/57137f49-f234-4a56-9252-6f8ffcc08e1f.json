@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "57137f49-f234-4a56-9252-6f8ffcc08e1f",
+  "path": "grill-me",
+  "path_key": "grill-me",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

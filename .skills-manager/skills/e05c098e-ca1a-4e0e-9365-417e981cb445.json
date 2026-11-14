@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e05c098e-ca1a-4e0e-9365-417e981cb445",
+  "path": "graphify-2",
+  "path_key": "graphify-2",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

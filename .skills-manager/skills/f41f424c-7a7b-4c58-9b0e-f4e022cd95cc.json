@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f41f424c-7a7b-4c58-9b0e-f4e022cd95cc",
+  "path": "developer-growth-analysis",
+  "path_key": "developer-growth-analysis",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

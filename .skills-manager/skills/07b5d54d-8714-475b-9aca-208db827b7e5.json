@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "07b5d54d-8714-475b-9aca-208db827b7e5",
+  "path": "creative-writing",
+  "path_key": "creative-writing",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

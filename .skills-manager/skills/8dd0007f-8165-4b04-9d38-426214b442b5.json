@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8dd0007f-8165-4b04-9d38-426214b442b5",
+  "path": "create-architectural-decision-record",
+  "path_key": "create-architectural-decision-record",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

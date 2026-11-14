@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e8613a7c-8db7-470f-b980-a8b7e03fe058",
+  "path": "project-workflow-analysis-blueprint-generator",
+  "path_key": "project-workflow-analysis-blueprint-generator",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

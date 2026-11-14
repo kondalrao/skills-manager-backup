@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "69ff0cb1-83a9-4c73-9bf2-2989ea4ec6ef",
+  "path": "convert-plaintext-to-md",
+  "path_key": "convert-plaintext-to-md",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

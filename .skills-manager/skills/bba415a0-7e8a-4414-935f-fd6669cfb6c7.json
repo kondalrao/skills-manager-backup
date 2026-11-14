@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "bba415a0-7e8a-4414-935f-fd6669cfb6c7",
+  "path": "docker-containerization-expert",
+  "path_key": "docker-containerization-expert",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "70025398-5181-4918-80e7-8defc5fc89d6",
+  "path": "herdr-mods",
+  "path_key": "herdr-mods",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

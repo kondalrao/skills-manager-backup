@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0961421a-ce81-4719-ab5f-eb0454301b25",
+  "path": "copilot-cli-quickstart",
+  "path_key": "copilot-cli-quickstart",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "577b85f5-16e0-45b7-8c6e-248db8a877d7",
+  "path": "refactor-plan",
+  "path_key": "refactor-plan",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5f000828-31cb-49f3-844f-fcbaab4253de",
+  "path": "reasoner-planner-agent",
+  "path_key": "reasoner-planner-agent",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

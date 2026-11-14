@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5cef7c43-6708-4a37-8665-b2e3ed73aee0",
+  "path": "ebpf",
+  "path_key": "ebpf",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

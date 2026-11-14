@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "cd3fb103-29d6-4d90-a954-37f17e22509a",
+  "path": "kubernetes-container-orchestration",
+  "path_key": "kubernetes-container-orchestration",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

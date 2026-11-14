@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "52d18a05-fab6-444b-96bb-46152aac45b7",
+  "path": "create-agentsmd",
+  "path_key": "create-agentsmd",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

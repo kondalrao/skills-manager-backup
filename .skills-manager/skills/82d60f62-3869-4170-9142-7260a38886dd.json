@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "82d60f62-3869-4170-9142-7260a38886dd",
+  "path": "azure-resource-visualizer",
+  "path_key": "azure-resource-visualizer",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

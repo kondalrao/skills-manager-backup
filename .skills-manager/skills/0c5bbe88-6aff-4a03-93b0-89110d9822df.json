@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0c5bbe88-6aff-4a03-93b0-89110d9822df",
+  "path": "python-mcp-server-generator",
+  "path_key": "python-mcp-server-generator",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

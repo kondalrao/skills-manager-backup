@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a3473d36-62c5-49f9-97a9-b844fa1ed4a7",
+  "path": "scientific-critical-thinking",
+  "path_key": "scientific-critical-thinking",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

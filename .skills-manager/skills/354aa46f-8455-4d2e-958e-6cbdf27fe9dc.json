@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "354aa46f-8455-4d2e-958e-6cbdf27fe9dc",
+  "path": "workflow-orchestration",
+  "path_key": "workflow-orchestration",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "ed832673-98c5-4599-a2dd-5b4d4253a11a",
+  "path": "python-fastapi-development",
+  "path_key": "python-fastapi-development",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

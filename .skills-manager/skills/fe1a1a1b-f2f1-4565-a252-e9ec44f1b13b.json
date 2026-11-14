@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "fe1a1a1b-f2f1-4565-a252-e9ec44f1b13b",
+  "path": "python-async-programming-export",
+  "path_key": "python-async-programming-export",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

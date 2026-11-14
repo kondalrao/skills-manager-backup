@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "c639a62b-1e43-4f9f-a4fb-c22beeb3ecff",
+  "path": "herdr-gpui-browser",
+  "path_key": "herdr-gpui-browser",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

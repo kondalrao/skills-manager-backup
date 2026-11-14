@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "c8435671-1991-4682-8c58-7361ee853be4",
+  "path": "draw-io-diagram-generator",
+  "path_key": "draw-io-diagram-generator",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

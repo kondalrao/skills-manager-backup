@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7af0df35-b72b-40df-8b2c-61a93de2235c",
+  "path": "azure-messaging",
+  "path_key": "azure-messaging",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

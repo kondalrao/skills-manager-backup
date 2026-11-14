@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0aa952d1-5b7a-421a-a9fb-460e2be1099a",
+  "path": "graphify-vault-operator",
+  "path_key": "graphify-vault-operator",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

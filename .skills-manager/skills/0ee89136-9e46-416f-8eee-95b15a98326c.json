@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0ee89136-9e46-416f-8eee-95b15a98326c",
+  "path": "herdr-automations",
+  "path_key": "herdr-automations",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

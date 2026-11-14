@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4b75a464-dc1e-4ccd-b806-0fc9371088b1",
+  "path": "sora",
+  "path_key": "sora",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
