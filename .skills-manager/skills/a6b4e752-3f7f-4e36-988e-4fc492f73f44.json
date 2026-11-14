@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a6b4e752-3f7f-4e36-988e-4fc492f73f44",
+  "path": "create-implementation-plan",
+  "path_key": "create-implementation-plan",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

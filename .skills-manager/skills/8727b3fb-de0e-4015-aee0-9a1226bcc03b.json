@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8727b3fb-de0e-4015-aee0-9a1226bcc03b",
+  "path": "python-devops-infrastructure-automation",
+  "path_key": "python-devops-infrastructure-automation",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

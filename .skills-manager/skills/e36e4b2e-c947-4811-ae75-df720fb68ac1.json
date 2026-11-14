@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e36e4b2e-c947-4811-ae75-df720fb68ac1",
+  "path": "marimo-pair",
+  "path_key": "marimo-pair",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

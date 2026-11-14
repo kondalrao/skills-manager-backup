@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7ca778b2-1c50-4a84-9437-20c5b4724625",
+  "path": "create-technical-spike",
+  "path_key": "create-technical-spike",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

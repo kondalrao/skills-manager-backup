@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "1d8a321d-b5e6-4b69-8279-71c99db962b9",
+  "path": "netmiko-ssh-automation",
+  "path_key": "netmiko-ssh-automation",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

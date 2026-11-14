@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "ff33c171-f5de-4366-8038-ce920d543c09",
+  "path": "clarify",
+  "path_key": "clarify",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

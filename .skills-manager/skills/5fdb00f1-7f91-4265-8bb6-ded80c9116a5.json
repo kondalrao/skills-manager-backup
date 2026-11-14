@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5fdb00f1-7f91-4265-8bb6-ded80c9116a5",
+  "path": "local-skill-lifecycle-manager",
+  "path_key": "local-skill-lifecycle-manager",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6bfa4707-60d5-46cb-9c1b-387e877870d3",
+  "path": "azure-deploy",
+  "path_key": "azure-deploy",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

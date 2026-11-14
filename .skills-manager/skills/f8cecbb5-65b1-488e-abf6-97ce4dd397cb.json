@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f8cecbb5-65b1-488e-abf6-97ce4dd397cb",
+  "path": "ai-agents-architect",
+  "path_key": "ai-agents-architect",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

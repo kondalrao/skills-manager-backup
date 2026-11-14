@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "05195245-41b0-45e9-be99-f5159b0f7bea",
+  "path": "vault-setup",
+  "path_key": "vault-setup",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

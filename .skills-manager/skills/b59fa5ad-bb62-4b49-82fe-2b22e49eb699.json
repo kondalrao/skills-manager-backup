@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "b59fa5ad-bb62-4b49-82fe-2b22e49eb699",
+  "path": "personal-teacher-mentor",
+  "path_key": "personal-teacher-mentor",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

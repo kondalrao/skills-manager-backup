@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a404439f-00a0-4d82-972b-6dcf19067066",
+  "path": "debugging-agent",
+  "path_key": "debugging-agent",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

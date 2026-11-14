@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "716e2c41-f95e-4566-b100-997f3cbff93a",
+  "path": "diagram-design",
+  "path_key": "diagram-design",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

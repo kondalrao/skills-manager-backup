@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8d6c0c44-4ef5-4330-bd1a-81e2fa77749f",
+  "path": "azure-kusto",
+  "path_key": "azure-kusto",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

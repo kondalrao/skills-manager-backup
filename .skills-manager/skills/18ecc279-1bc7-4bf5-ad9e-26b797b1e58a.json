@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "18ecc279-1bc7-4bf5-ad9e-26b797b1e58a",
+  "path": "refractoring-agent",
+  "path_key": "refractoring-agent",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

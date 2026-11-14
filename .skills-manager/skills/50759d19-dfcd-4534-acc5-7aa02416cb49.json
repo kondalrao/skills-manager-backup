@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "50759d19-dfcd-4534-acc5-7aa02416cb49",
+  "path": "create-tldr-page",
+  "path_key": "create-tldr-page",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

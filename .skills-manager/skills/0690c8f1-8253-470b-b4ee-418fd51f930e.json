@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "0690c8f1-8253-470b-b4ee-418fd51f930e",
+  "path": "discover-azure-skills",
+  "path_key": "discover-azure-skills",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

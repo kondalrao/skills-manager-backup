@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "bf002230-34a6-4ccd-ad4d-889d61b5802b",
+  "path": "api-design-agent",
+  "path_key": "api-design-agent",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

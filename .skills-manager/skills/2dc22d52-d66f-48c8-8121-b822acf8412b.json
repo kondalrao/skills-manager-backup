@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2dc22d52-d66f-48c8-8121-b822acf8412b",
+  "path": "azure-ai",
+  "path_key": "azure-ai",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

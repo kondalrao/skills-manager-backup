@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d96c7e0c-4186-4e7c-9583-56c416d39658",
+  "path": "create-specification",
+  "path_key": "create-specification",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

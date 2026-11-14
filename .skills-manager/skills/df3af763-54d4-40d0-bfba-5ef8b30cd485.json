@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "df3af763-54d4-40d0-bfba-5ef8b30cd485",
+  "path": "azure-storage",
+  "path_key": "azure-storage",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "d24354a5-1891-467f-b403-b831f72b6bfb",
+  "path": "agent-rules-books-router",
+  "path_key": "agent-rules-books-router",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

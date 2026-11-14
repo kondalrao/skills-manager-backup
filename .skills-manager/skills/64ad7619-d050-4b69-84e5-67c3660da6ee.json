@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "64ad7619-d050-4b69-84e5-67c3660da6ee",
+  "path": "mcp-cli",
+  "path_key": "mcp-cli",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

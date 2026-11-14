@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7de84f44-0046-4533-ba3b-28ca1a00eb9d",
+  "path": "markdown-mermaid-writing",
+  "path_key": "markdown-mermaid-writing",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

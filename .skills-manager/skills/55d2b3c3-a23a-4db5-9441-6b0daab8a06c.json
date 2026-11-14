@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "55d2b3c3-a23a-4db5-9441-6b0daab8a06c",
+  "path": "airunway-aks-setup",
+  "path_key": "airunway-aks-setup",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

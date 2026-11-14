@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6bf9c1c9-6f97-402f-a0ff-e670d8065415",
+  "path": "confluence-technical-publisher",
+  "path_key": "confluence-technical-publisher",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

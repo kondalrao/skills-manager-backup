@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "adf9dfe9-9e2d-4098-a2ac-960f329569cf",
+  "path": "architecture-blueprint-generator",
+  "path_key": "architecture-blueprint-generator",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "854b3c92-c395-4137-b65b-519b3f03b0eb",
+  "path": "philosopher",
+  "path_key": "philosopher",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

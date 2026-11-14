@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "824eccd2-7a0c-4a7a-b2b4-a3b9d66fd12d",
+  "path": "youtube-summary",
+  "path_key": "youtube-summary",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

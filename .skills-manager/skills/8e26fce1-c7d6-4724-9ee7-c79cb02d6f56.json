@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8e26fce1-c7d6-4724-9ee7-c79cb02d6f56",
+  "path": "entra-app-registration",
+  "path_key": "entra-app-registration",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

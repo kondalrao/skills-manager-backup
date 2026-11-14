@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "3656c59c-c977-492a-a05d-3a23388fa65c",
+  "path": "networkx",
+  "path_key": "networkx",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

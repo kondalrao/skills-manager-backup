@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "40c6c73f-2af6-4d41-a6c1-c6ffb8b57df9",
+  "path": "azure-cloud-migrate",
+  "path_key": "azure-cloud-migrate",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

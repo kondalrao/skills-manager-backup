@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "55f50414-bea7-4016-a28a-6ec78a4762b8",
+  "path": "supacode-deeplinks",
+  "path_key": "supacode-deeplinks",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

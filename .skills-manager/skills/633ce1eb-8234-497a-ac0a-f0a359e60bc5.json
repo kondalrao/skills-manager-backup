@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "633ce1eb-8234-497a-ac0a-f0a359e60bc5",
+  "path": "simpy",
+  "path_key": "simpy",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

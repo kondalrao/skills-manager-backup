@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "4c8e03d2-ceeb-4e76-8d29-49bf9e4c1234",
+  "path": "monitoring-observability",
+  "path_key": "monitoring-observability",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

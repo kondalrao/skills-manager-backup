@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8bff36d5-c779-49c1-bd66-b4d142905eca",
+  "path": "azure-app-onboard-prereq",
+  "path_key": "azure-app-onboard-prereq",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

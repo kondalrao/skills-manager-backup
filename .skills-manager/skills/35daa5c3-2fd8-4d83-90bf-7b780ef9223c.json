@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "35daa5c3-2fd8-4d83-90bf-7b780ef9223c",
+  "path": "valyu-best-practices",
+  "path_key": "valyu-best-practices",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

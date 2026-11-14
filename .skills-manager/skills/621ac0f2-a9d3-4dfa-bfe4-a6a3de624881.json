@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "621ac0f2-a9d3-4dfa-bfe4-a6a3de624881",
+  "path": "azure-aigateway",
+  "path_key": "azure-aigateway",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

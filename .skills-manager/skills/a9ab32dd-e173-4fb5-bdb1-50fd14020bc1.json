@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a9ab32dd-e173-4fb5-bdb1-50fd14020bc1",
+  "path": "azure-resource-lookup",
+  "path_key": "azure-resource-lookup",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

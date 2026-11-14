@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "f9a40ac3-3153-4d7f-9681-adef43955865",
+  "path": "agent-self-evaluation",
+  "path_key": "agent-self-evaluation",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

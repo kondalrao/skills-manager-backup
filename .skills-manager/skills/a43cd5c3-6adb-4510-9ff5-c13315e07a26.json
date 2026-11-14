@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "a43cd5c3-6adb-4510-9ff5-c13315e07a26",
+  "path": "publish-to-pages",
+  "path_key": "publish-to-pages",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "659f1e2f-e329-4ae1-9213-c63ec5d3f42b",
+  "path": "supacode-cli",
+  "path_key": "supacode-cli",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "import",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
