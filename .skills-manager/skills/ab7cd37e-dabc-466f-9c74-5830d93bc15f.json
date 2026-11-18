@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "ab7cd37e-dabc-466f-9c74-5830d93bc15f",
+  "path": "rust",
+  "path_key": "rust",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,699 @@
+{
+  "name": "Rust skill reference rules",
+  "version": "1.1",
+  "reviewed_date": "2026-11-15",
+  "status": "bundled reviewed guideline snapshot",
+  "entrypoint": "../SKILL.md",
+  "rule_count": 65,
+  "rules": [
+    {
+      "id": "R-CORE-01",
+      "title": "Establish the project contract",
+      "file": "core.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-CORE-02",
+      "title": "Use the existing format and language",
+      "file": "core.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-CORE-03",
+      "title": "Keep the design proportional",
+      "file": "core.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-CORE-04",
+      "title": "Make public contracts visible",
+      "file": "core.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-CORE-05",
+      "title": "Keep policy distinct from fact",
+      "file": "core.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-CORE-06",
+      "title": "Report evidence and limits",
+      "file": "core.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-TYPE-01",
+      "title": "Encode meaningful distinctions",
+      "file": "types-ownership.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-TYPE-02",
+      "title": "Protect every construction path",
+      "file": "types-ownership.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-TYPE-03",
+      "title": "Implement traits as contracts",
+      "file": "types-ownership.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-OWN-01",
+      "title": "Select ownership from the operation",
+      "file": "types-ownership.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-OWN-02",
+      "title": "Accept the least restrictive useful input",
+      "file": "types-ownership.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-OWN-03",
+      "title": "Move values through valid states",
+      "file": "types-ownership.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-API-01",
+      "title": "Plan public API evolution",
+      "file": "types-ownership.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-OWN-04",
+      "title": "Select Copy and Clone from value semantics",
+      "file": "types-ownership.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-OWN-05",
+      "title": "Give stored data a clear owner",
+      "file": "types-ownership.md",
+      "levels": [
+        "MAY",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ERR-01",
+      "title": "Select the failure contract",
+      "file": "errors.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ERR-02",
+      "title": "Design for caller decisions",
+      "file": "errors.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ERR-03",
+      "title": "Add context without losing meaning",
+      "file": "errors.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ERR-04",
+      "title": "Put reporting at an accountable boundary",
+      "file": "errors.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ERR-05",
+      "title": "Treat panic containment as a separate design",
+      "file": "errors.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ARCH-01",
+      "title": "Keep policy separate from external mechanisms",
+      "file": "architecture-async.md",
+      "levels": [
+        "MAY",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ARCH-02",
+      "title": "Choose dispatch from the boundary",
+      "file": "architecture-async.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ASYNC-01",
+      "title": "State runtime and future contracts",
+      "file": "architecture-async.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ASYNC-02",
+      "title": "Keep executor work bounded",
+      "file": "architecture-async.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-SYNC-01",
+      "title": "Protect state with a clear lock contract",
+      "file": "architecture-async.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-ARCH-03",
+      "title": "Test the boundary as well as the domain",
+      "file": "architecture-async.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-MAC-01",
+      "title": "Establish the need",
+      "file": "macros.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-MAC-02",
+      "title": "Specify expansion behavior",
+      "file": "macros.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-MAC-03",
+      "title": "Make exported paths work for consumers",
+      "file": "macros.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-MAC-04",
+      "title": "Respect matching and edition rules",
+      "file": "macros.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-MAC-05",
+      "title": "Verify diagnostics and crate compatibility",
+      "file": "macros.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-SAFE-01",
+      "title": "State the soundness argument",
+      "file": "unsafe-ffi.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-SAFE-02",
+      "title": "Keep logic invariants separate from safety preconditions",
+      "file": "unsafe-ffi.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-FFI-01",
+      "title": "Define the complete boundary",
+      "file": "unsafe-ffi.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-FFI-02",
+      "title": "Control unwinding and library state",
+      "file": "unsafe-ffi.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-SAFE-03",
+      "title": "Test adversarial safe use",
+      "file": "unsafe-ffi.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-PERF-01",
+      "title": "Measure the required workload",
+      "file": "performance-numerics.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-PERF-02",
+      "title": "Match allocation to the lifetime",
+      "file": "performance-numerics.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-PERF-03",
+      "title": "Keep deployment choices explicit",
+      "file": "performance-numerics.md",
+      "levels": [
+        "MAY",
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-PERF-04",
+      "title": "Account for telemetry cost",
+      "file": "performance-numerics.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-NUM-01",
+      "title": "Define the representation and valid range",
+      "file": "performance-numerics.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-NUM-02",
+      "title": "Separate time meaning from storage precision",
+      "file": "performance-numerics.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-VER-01",
+      "title": "Prove the required behavior",
+      "file": "verification.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-VER-02",
+      "title": "Use the repository checks first",
+      "file": "verification.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-VER-03",
+      "title": "Test supported feature and toolchain states",
+      "file": "verification.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-VER-04",
+      "title": "Match tools to the risk",
+      "file": "verification.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-VER-05",
+      "title": "Review release behavior",
+      "file": "verification.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-API-02",
+      "title": "Use predictable operation families",
+      "file": "library-api.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-API-03",
+      "title": "Integrate collections and I/O with standard traits",
+      "file": "library-api.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-API-04",
+      "title": "Make configuration and flags explicit",
+      "file": "library-api.md",
+      "levels": [
+        "MAY",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-API-05",
+      "title": "Provide useful diagnostics and serialization contracts",
+      "file": "library-api.md",
+      "levels": [
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-API-06",
+      "title": "Keep extension and representation choices open",
+      "file": "library-api.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-LIFE-01",
+      "title": "Make cleanup dependable",
+      "file": "library-api.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-API-07",
+      "title": "Publish the supported contract",
+      "file": "library-api.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-STYLE-01",
+      "title": "Select the formatter contract",
+      "file": "style-documentation.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-STYLE-02",
+      "title": "Separate language edition from style edition",
+      "file": "style-documentation.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-STYLE-03",
+      "title": "Preserve semantic order",
+      "file": "style-documentation.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-STYLE-04",
+      "title": "Review content outside formatter coverage",
+      "file": "style-documentation.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-STYLE-05",
+      "title": "Review manifests separately",
+      "file": "style-documentation.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-KERN-01",
+      "title": "Establish the target tree",
+      "file": "kernel-profile.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-KERN-02",
+      "title": "Follow the kernel source conventions",
+      "file": "kernel-profile.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-KERN-03",
+      "title": "Explain each unsafe use",
+      "file": "kernel-profile.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-KERN-04",
+      "title": "Use the kernel abstraction boundary",
+      "file": "kernel-profile.md",
+      "levels": [
+        "MUST"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-KERN-05",
+      "title": "Use kernel failure and lint policy",
+      "file": "kernel-profile.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    },
+    {
+      "id": "R-KERN-06",
+      "title": "Use kernel checks and report their scope",
+      "file": "kernel-profile.md",
+      "levels": [
+        "MUST",
+        "SHOULD"
+      ],
+      "has_check": true
+    }
+  ],
+  "requested_sources": [
+    {
+      "url": "https://microsoft.github.io/rust-guidelines/agents/all.txt",
+      "version": "2026.6",
+      "coverage": "90 rule sections"
+    },
+    {
+      "url": "https://www.howtocodeit.com/guides/rust-in-space",
+      "version": "1.0.7",
+      "coverage": "24 speaker-note sections"
+    },
+    {
+      "url": "https://www.howtocodeit.com/guides/writing-production-rust-macros-with-macro-rules",
+      "version": "1.0.7",
+      "coverage": "complete guide"
+    },
+    {
+      "url": "https://www.howtocodeit.com/guides/the-definitive-guide-to-rust-error-handling",
+      "version": "1.1.2",
+      "coverage": "Parts I\u2013III; Part IV placeholder"
+    },
+    {
+      "url": "https://www.howtocodeit.com/guides/master-hexagonal-architecture-in-rust",
+      "version": "1.1.7",
+      "coverage": "Parts I\u2013IV; Part V placeholder"
+    },
+    {
+      "url": "https://www.howtocodeit.com/guides/rust-ownership-explained-merging-linked-lists",
+      "version": "1.1.2",
+      "coverage": "complete guide and correction discussion"
+    },
+    {
+      "url": "https://www.howtocodeit.com/guides/ultimate-guide-rust-newtypes",
+      "version": "1.0.15",
+      "coverage": "complete guide"
+    },
+    {
+      "url": "https://google.github.io/styleguide/rustguide.html",
+      "version": null,
+      "coverage": "all page sections; live page"
+    },
+    {
+      "url": "https://doc.rust-lang.org/nightly/style-guide/",
+      "version": null,
+      "coverage": "full print book; introduction and all 9 numbered chapters",
+      "limit": "moving nightly documentation; installed toolchain governs use"
+    },
+    {
+      "url": "https://rust-lang.github.io/api-guidelines/",
+      "version": null,
+      "coverage": "landing, checklist, all 11 topic chapters, 54 unique IDs, external links page"
+    },
+    {
+      "url": "https://joshua-laughner.io/posts/rust-beginning-rules-of-thumb/",
+      "version": null,
+      "coverage": "three rules, exceptions, graph-ID example"
+    },
+    {
+      "url": "https://docs.kernel.org/rust/coding-guidelines.html",
+      "version": null,
+      "coverage": "full guide and relevant kernel build, API, safety, and test docs",
+      "profile": "Linux kernel only",
+      "limit": "live docs unversioned; generated API reads reported v7.4-rc2; target-tree version must be checked"
+    }
+  ],
+  "style_guide_chapters_reviewed": 9,
+  "api_guideline_rules_reviewed": 54
+}

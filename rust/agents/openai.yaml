@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rust"
+  short_description: "Write and review Rust from project contracts"
+  default_prompt: "Use $rust to complete this Rust task with the project toolchain and relevant guideline checks."
