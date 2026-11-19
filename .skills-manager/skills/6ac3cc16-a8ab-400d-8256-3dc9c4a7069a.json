@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "6ac3cc16-a8ab-400d-8256-3dc9c4a7069a",
+  "path": "writing-studio",
+  "path_key": "writing-studio",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
