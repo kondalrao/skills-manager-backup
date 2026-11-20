@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "e0042df8-c308-4070-89b3-e400cb7ad442",
+  "path": "karpathy-methodology",
+  "path_key": "karpathy-methodology",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "skillssh",
+    "ref": "learnprompt/andrej-karpathy-skills/karpathy-methodology",
+    "subpath": "karpathy-methodology",
+    "branch": null
+  }
+}

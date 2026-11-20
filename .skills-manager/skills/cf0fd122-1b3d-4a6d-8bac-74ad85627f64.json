@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "cf0fd122-1b3d-4a6d-8bac-74ad85627f64",
+  "path": "karpathy-education-first",
+  "path_key": "karpathy-education-first",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "skillssh",
+    "ref": "learnprompt/andrej-karpathy-skills/karpathy-education-first",
+    "subpath": "karpathy-education-first",
+    "branch": null
+  }
+}

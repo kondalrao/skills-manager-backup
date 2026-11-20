@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "8065d355-8259-4140-8b86-8ce967ab01c1",
+  "path": "karpathy-minimalism",
+  "path_key": "karpathy-minimalism",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "skillssh",
+    "ref": "learnprompt/andrej-karpathy-skills/karpathy-minimalism",
+    "subpath": "karpathy-minimalism",
+    "branch": null
+  }
+}

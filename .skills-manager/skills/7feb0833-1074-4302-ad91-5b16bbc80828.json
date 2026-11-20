@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "7feb0833-1074-4302-ad91-5b16bbc80828",
+  "path": "karpathy-idea-files",
+  "path_key": "karpathy-idea-files",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "skillssh",
+    "ref": "learnprompt/andrej-karpathy-skills/karpathy-idea-files",
+    "subpath": "karpathy-idea-files",
+    "branch": null
+  }
+}

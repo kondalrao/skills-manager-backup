@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5b117a44-c917-4dde-8d57-a351e222141b",
+  "path": "karpathy-autoresearch",
+  "path_key": "karpathy-autoresearch",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "skillssh",
+    "ref": "learnprompt/andrej-karpathy-skills/karpathy-autoresearch",
+    "subpath": "karpathy-autoresearch",
+    "branch": null
+  }
+}

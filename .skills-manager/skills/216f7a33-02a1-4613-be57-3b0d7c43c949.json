@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "216f7a33-02a1-4613-be57-3b0d7c43c949",
+  "path": "karpathy-system-prompt-learning",
+  "path_key": "karpathy-system-prompt-learning",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "skillssh",
+    "ref": "learnprompt/andrej-karpathy-skills/karpathy-system-prompt-learning",
+    "subpath": "karpathy-system-prompt-learning",
+    "branch": null
+  }
+}
