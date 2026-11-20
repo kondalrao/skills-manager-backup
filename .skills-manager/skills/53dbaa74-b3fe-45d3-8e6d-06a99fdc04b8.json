@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "53dbaa74-b3fe-45d3-8e6d-06a99fdc04b8",
+  "path": "karpathy-skills",
+  "path_key": "karpathy-skills",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}
