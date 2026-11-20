@@ -1,0 +1,46 @@
+Control plane (userspace, OUT of scope)
++-------------------------------------------------------------+
+| Programmers (FLOW-009):                                     |
+|   IM / PCM / MCEC / MCM / IP+IGMP / coppmgr+aclqos /        |
+|   PM CLI / PnP / POAP / LLDP(dlsym) / GOLD                  |
+|            |                                                |
+|            v                                                |
+| libvdcklm.c                                                 |
+|   vdc_add_src_index_mapping / vdc_add_ipaddr_mapping /      |
+|   vdc_add_ifindex_mapping / mgmt_vdc_upd /                  |
+|   vdc_set_q_mapping ...                                     |
++-------------------------------------------------------------+
+             |
+             |  ioctl(VDC_IOC*)   [WRITE path]
+             v
+klm_vdc (this module)
++-------------------------------------------------------------+
+|  /dev/klm_vdc                                               |
+|  vdc_chr_ioctl  ---- vdc_table_entry_add/del, ----+         |
+|                      mgmt_vdc_table_entry_add ... |         |
+|                                                   v         |
+|                          si_vdc_map / ip_vdc_map / ifindex_ |
+|                          vdc_map / mgmt_vdc / mgmt_mcast /  |
+|                          qmap / stats  (TABLES)             |
+|                                   ^                         |
+|                                   | vdc_table_lookup(src_index)
+|                                   |                         |
+|  eth_type_trans_inb / _mgmt ------+                         |
+|    -> *_si_vdc_eth_type_trans   [READ path]                 |
++-------------------------------------------------------------+
+   ^  |  ^  \
+   |  |  |   \... get_max_allowed_vdc ....> libsystem_vdc
+   |  |  |
+   |  |  \...... lcnd_get_outer_eth_hdr,
+   |  |          lcnd_plat_map_la_event_trap_to_sup_code,
+   |  |          lcnd_is_card_id_sone_g200_family,
+   |  |          LCND_CHECK_TRAP_CODE ..........> klm_lcnd
+   |  |
+   |  |  RX punt frame (calls fn-ptr)
+   |  \-------------------------------------- klm_psdev
+   |     returns 0xf1xx / 0xfcfc / ETH_P_BFD    (skb_protocol_get_inb/_mgmt
+   |                                             fn-ptrs; my_card_index,
+   \.... klm_vdc.c sets/NULLs fn-ptrs .........  mod_card_ids[])
+
+Note: the fn-ptrs skb_protocol_get_inb/_mgmt are DEFINED + EXPORT_SYMBOL'd by
+klm_psdev; klm_vdc only installs (init) and NULLs (exit) its implementations.

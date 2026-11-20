@@ -1,0 +1,27 @@
+Publisher server (ethpm / im / lim / vlan_mgr / l3vm / ...)
+        |
+        |  mts_send / fu_sdb_write_and_notify_local   (opcode + payload)
+        v
+KIM MTS queue  (MTS_SAP_KIM / MTS_SAP_REGISTRY)
+        |
+        v
+kim_notifs_get(opc)
+        |
+        v
+mts_msg_handler  (kim_process_* / kim_handle_*)
+        |
+        +---------------------------------+----------------------------------+
+        |                                                                    |
+        v  (DB branch)                                                       v  (program branch)
+parse payload (im_parse_* / *_parse_*)                     fill lcnd_cmn_info_t / lc_netdev_info_t
+        |                                                  (lc_nd_mod_code = LC_ND_*)
+        v                                                                    |
+update intf/vlan AVL DB + kim_pss_* (PSS)                                    |  os_syscall_ioctl(SIOCDEVMODLC)
+                                                                            v
+                                                                    lcnd_ioctl
+                                                                            |
+                                                                            v
+                                                                  switch(lc_nd_mod_code)
+                                                                            |
+                                                                            v
+                                                    program lc_if_info field and/or LCND hash table

@@ -1,0 +1,169 @@
+{
+  "pages": {
+    "KNOWLEDGE.md": {
+      "hash": "dd3c4735952837721a071bb85d859b8c6d4b5488c5b243f2ac732911a92d3555",
+      "pageId": "1507262521",
+      "title": "KNOWLEDGE.md"
+    },
+    "SKILL.md": {
+      "hash": "7599e2035876bf03d09e5ee0cce51bd975948298691e6dd501f48219ac682964",
+      "pageId": "1507033160",
+      "title": "SKILL.md"
+    },
+    "USAGE_COUNTS.md": {
+      "hash": "48ad0b8d96df53a651d074a329b4ac105560824e57635e047de42c3b5a41284a",
+      "pageId": "1507000657",
+      "title": "USAGE_COUNTS.md"
+    },
+    "__root__": {
+      "hash": "3c418fc10fd7230f50c07e74f6dd4949a859759e0c3ddb5718cd70f178ef8cd9",
+      "pageId": "1504907348",
+      "title": "KStack Skill (replica)"
+    },
+    "architecture/": {
+      "hash": "9442daf374b20805b892680f0a1e430afcb90bd361fe27150706f7d1069016f0",
+      "pageId": "1507098626",
+      "title": "architecture/"
+    },
+    "architecture/kfib-library-architecture.md": {
+      "hash": "72b8f41fff067070c80660d93b7a4253851fa8f997f094e051cf1b492da77978",
+      "pageId": "1513653973",
+      "title": "architecture/kfib-library-architecture.md"
+    },
+    "architecture/kim-process-architecture.md": {
+      "hash": "8d28496cfc0f2db42b2c27baf72ceba3d5db04bfffa99a42e27339aef1af9b64",
+      "pageId": "1512966367",
+      "title": "architecture/kim-process-architecture.md"
+    },
+    "architecture/klm-vdc-driver-architecture.md": {
+      "hash": "a999fe3e101208072208290522712cfc49b0a16e1387dc6eccafe8c38b5799db",
+      "pageId": "1507296661",
+      "title": "architecture/klm-vdc-driver-architecture.md"
+    },
+    "architecture/netbroker-architecture.md": {
+      "hash": "c0f07705ff25a85af25348cce31871dc11725bfab865b18e56c19f3799ab9f38",
+      "pageId": "1577222245",
+      "title": "architecture/netbroker-architecture.md"
+    },
+    "architecture/psinb-driver-architecture.md": {
+      "hash": "dfa7c99edfddcebfb01127c192b312baf357d252d6da9a463305017b40217e8a",
+      "pageId": "1507229735",
+      "title": "architecture/psinb-driver-architecture.md"
+    },
+    "knowledge/": {
+      "hash": "b9c9da318fe352a508b16aa9c756c0c48dfaa7bc267ea3d818a21eec38448ded",
+      "pageId": "1507164171",
+      "title": "knowledge/"
+    },
+    "knowledge/entries.md": {
+      "hash": "7f2ebed470f5c0f72c4eddf8d7735e7449f5428fdf2d17f8dbda15329310fea1",
+      "pageId": "1507229817",
+      "title": "knowledge/entries.md"
+    },
+    "knowledge/methods.md": {
+      "hash": "bb0de23134d40a7a238dd23017604a99da9938025beb0d83109e93f7ef348962",
+      "pageId": "1507721217",
+      "title": "knowledge/methods.md"
+    },
+    "knowledge/switch-commands.md": {
+      "hash": "79d1e1c9aece1daa0b17212ba4832ffd9b96c916120cf4f9a8af6dc89a667bb7",
+      "pageId": "1507459130",
+      "title": "knowledge/switch-commands.md"
+    },
+    "references/": {
+      "hash": "9fd0c67a197c4585403be0ccc5f8c3ea039aedc2e4075616d0ea4a29acf7f7d9",
+      "pageId": "1504645108",
+      "title": "references/"
+    },
+    "references/catch-all.md": {
+      "hash": "3d5b32466885519010b0cbabfcb1b50ab3cf03418aaf697f342ffaf9492e61b4",
+      "pageId": "1507000327",
+      "title": "references/catch-all.md"
+    },
+    "references/hw-codenames-confluence-cache.md": {
+      "hash": "3b67acf773aaee5e37d185eaaeca0ef0cc50a65a296a4987c9b15cf18bc7824f",
+      "pageId": "1507033198",
+      "title": "references/hw-codenames-confluence-cache.md"
+    },
+    "references/hw-codenames-sone.md": {
+      "hash": "faabcf4e868e58f6fe977f0228a38712a3c3566c66a47e1227d28b3481883fdf",
+      "pageId": "1504873346",
+      "title": "references/hw-codenames-sone.md"
+    },
+    "references/ipsec.md": {
+      "hash": "9364b13d2d80005ec9a7a6e06f6d2a080f20d4e1c45de1989a52842d35bd3e6a",
+      "pageId": "1507360782",
+      "title": "references/ipsec.md"
+    },
+    "references/kfib-route-sync.md": {
+      "hash": "3229b9450e019f609af8b07d13a7cee4e6823caa33c3ad495096a23205968559",
+      "pageId": "1513621040",
+      "title": "references/kfib-route-sync.md"
+    },
+    "references/kim-mts-map.md": {
+      "hash": "58820e82b061bc7eaf9402d713ce3a0ed0a7be5c0a7db8bf5ed68196fd465d1e",
+      "pageId": "1507295397",
+      "title": "references/kim-mts-map.md"
+    },
+    "references/kim-process-arch.md": {
+      "hash": "68a506e4aff19cf9ec4b14caefa365e2fdc498f35927575cb9979727ac462663",
+      "pageId": "1513980402",
+      "title": "references/kim-process-arch.md"
+    },
+    "references/monthly-pr-sweep.md": {
+      "hash": "40697fbb979e44327df40b6ef3d3464da5a82be9713454be5122d6c631b9af40",
+      "pageId": "1571489718",
+      "title": "references/monthly-pr-sweep.md"
+    },
+    "references/netbroker-rtnl-trap.md": {
+      "hash": "ed7806d51e31c2a5514717404f22bd0e9110697d949348253223eb12ce223a22",
+      "pageId": "1571782755",
+      "title": "references/netbroker-rtnl-trap.md"
+    },
+    "references/psdev-init.md": {
+      "hash": "608528cd7879607ae1c66fcfb76d70a4f13ec9ac3613d61f6c56e560137a4a95",
+      "pageId": "1507262484",
+      "title": "references/psdev-init.md"
+    },
+    "references/psinb-rx-sone.md": {
+      "hash": "0bbaaa0ebbc05566fb6838501dd0482de160bbc757a36d69e662da892d132e51",
+      "pageId": "1504645150",
+      "title": "references/psinb-rx-sone.md"
+    },
+    "references/sone-encap-tx.md": {
+      "hash": "66700e7eb923464115b13bd6514367d1c55ebf2066c36ecf11ce403b100adcbe",
+      "pageId": "1506511409",
+      "title": "references/sone-encap-tx.md"
+    },
+    "references/vdc-ioctl-writers.md": {
+      "hash": "e498e0a159f69bc3009290b274691115778a2de1bdfa13078cac6f3a4cb2e06c",
+      "pageId": "1507592466",
+      "title": "references/vdc-ioctl-writers.md"
+    },
+    "references/vdc-rx-classification-sone.md": {
+      "hash": "a249cc2872db59fdef8f54dd91c57723723fdbeeef339eaed9f627d5bb446591",
+      "pageId": "1507591869",
+      "title": "references/vdc-rx-classification-sone.md"
+    },
+    "references/vxlan-decap-sone-rx.md": {
+      "hash": "252df24e7306eb5c0bc7e8dab6d3b55d47fd6ab388538d62f5ce2c1608e46619",
+      "pageId": "1507459091",
+      "title": "references/vxlan-decap-sone-rx.md"
+    },
+    "scripts/": {
+      "hash": "8b2b2b86462ed50b21d1e11ba43aa2d94e90b1ba04767ba78b87513fb9ab1efb",
+      "pageId": "1507033092",
+      "title": "scripts/"
+    },
+    "scripts/group_by_packet.py": {
+      "hash": "b048f5dec9ce349852d75fdce1cab1a978561d27d084936e59f601c0ffdedda7",
+      "pageId": "1507393569",
+      "title": "scripts/group_by_packet.py"
+    },
+    "scripts/trap_code.py": {
+      "hash": "c430fc39b31f834cfe810f929a6e08b1872ff898646f55416da93a1236b17c6b",
+      "pageId": "1507196974",
+      "title": "scripts/trap_code.py"
+    }
+  }
+}

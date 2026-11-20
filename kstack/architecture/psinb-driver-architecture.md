@@ -1,0 +1,506 @@
+# klm_psdev / `ps-inb` Driver Architecture
+
+Kernel-space pseudo-netdevice driver for NXOS inband punt/inject between the ASIC
+and the supervisor. This document describes the `klm_psdev` module
+(`standalone/platform/insieme/drivers/emon_psdev/kspace/`), centered on the
+**`ps-inb`** interface — the RX entry and TX exit point for the kernel stack
+(Kstack) datapath — and the **`mgmt_dev`** punt path that is common to all
+platforms.
+
+> **Scope & platform.** This document is **Silicon One (SONE)-focused** for the
+> ASIC datapath (`lcnd_sone_*`). Non-SONE ASIC families
+> (Tahoe/Teralynx/Tofino/Triton/MTC/kNET-Fretta/Nvidia/EPC/EOBC) are handled by
+> sibling code paths in the same module and are **cataloged, not detailed** here.
+> The `mgmt_dev` path (§7) is the exception — it is platform-independent.
+>
+> **Volatile vs stable.** Line numbers, `CARD_INDEX_*` membership, ifindex, MACs
+> and netdev names drift across releases. Anchor on **function names**,
+> `TOR_SONE_*_DEV` / `CARD_INDEX_*` macros, `RX_HANDLER_*` enums and trace-string
+> literals. Line references below are as-of hints (2026-07-09 source read).
+
+---
+
+## 1. Purpose
+
+`klm_psdev` exposes stable **pseudo netdevices** that decouple the rest of the
+system from the volatile, per-ASIC punt/inject interfaces:
+
+- **`ps-inb`** (`ins_ps_inb`) — the primary inband punt/inject netdev. RX entry
+  and TX exit for Kstack.
+- **`ps-svc-inb`** (`ins_app_inb`) — DPU-TOR only; app/service inband traffic.
+- **`ps-eobc`** (`ins_ps_eobc`) — Ethernet-out-of-band channel pseudo dev.
+- **`lc_inb`** (`ins_lc_inb`) — Fretta-TOR line-card inband (out of scope).
+
+Separately, the **management interface** (`mgmt_dev`, e.g. `mgmt0`) gets its own
+punt handler (`mgmt_rx_handle_frame`) on **every** platform (§7).
+
+On **RX** the driver re-homes a frame punted by the ASIC onto a pseudo dev,
+normalizes the L2 header, and hands it to LCND. On **TX** it re-points an
+injected frame from the pseudo dev to the real parent ASIC netdev and queues it.
+
+---
+
+## 2. Module identity & build
+
+| Item | Value |
+|------|-------|
+| Module name | `ins_emon_psdev` |
+| KLM artifact | `klm_psdev.klm` (from `psdev_main.c` + `psdev_sse.c` + `psdev_nvdia.c`) |
+| CLI artifact | `psdev.cli` (from `psdev.cmd`) |
+| Userspace lib | `libpsinb.so` (from `psdev_cli.c` + libsdwrap) |
+
+**Build systems (two, by release):**
+
+- **Bazel — going forward (current).** `BUILD` drives the build via
+  `nx_klm(name="klm_psdev.klm", srcs=[psdev_main.c, psdev_sse.c, psdev_nvdia.c, …])`,
+  `nx_cli_gen(name="psdev.cli", srcs=["psdev.cmd"])`, and
+  `nx_binary(name="libpsinb.so", srcs=["psdev_cli.c", …], deps=["//link/utils:libsdwrap.so"])`.
+  Kernel/LCND/BCM-SDK header deps and `bzl_platforms`
+  (`ins_x86_64_supe*`, `ins_x86e_supe_boot`) are declared in `BUILD`.
+- **gmake — legacy (old releases).** `module.mk` builds the same artifacts
+  (`MODULE := ins_emon_psdev`; `klm_psdev.klm` ← `psdev_main.ko`+`psdev_sse.ko`+`psdev_nvdia.ko`;
+  `psdev.cli`; `libpsinb.so`) via `pre.mk`/`post.mk`.
+
+Both produce identical deliverables; `BUILD` is authoritative for current
+branches, `module.mk` is retained for old releases.
+
+### Component inventory
+
+| File | Role |
+|------|------|
+| `psdev_main.c` | Core: init/exit, pseudo-dev create, RX/TX handlers, per-platform rx-handler registration + netdev notifiers, netdev ops. (~4.8k lines) |
+| `psdev_create.c` | Older "J2 variant" of pseudo-dev create + `ndo_start_xmit` (`parent_dev` forward). |
+| `psdev_sse.c` | System Services (SYSSRV) events — tracks fabric-card presence (`SYSSRV_EVENT_PSDEV_FC_NOTIFY`), updates `psdev_is_tah_fabric`, calls `lcnd_platform_hdlr_change` (external). |
+| `psdev_nvdia.c` / `.h` | Nvidia-card pseudo-dev + own netdev notifier (out of scope). |
+| `psdev_cli.c` | Userspace CLI backend (`show system inband cpumac log-threshold`) via MTS (`MTS_OPC_KIM_INBAND_PPS_SET/GET`). |
+| `psdev_private.h` | `psdev_priv_t`, SSE prototypes, `active_fm_mod`/`fc_pres_mask`. |
+| `psdev_sdwrap.h` | sdwrap history event (`E_PSINB_PPS`, `SRVUUID_PSINB`) — PPS telemetry. |
+| `export/platform/psdev.h` | Public macros/structs: `PSDEV_EPC_SUP_SMAC`, `EPC_TPID`, `psdev_threshold_s`. |
+| `BUILD` | **Bazel** build (current). |
+| `module.mk` | **gmake** build (legacy). |
+| `psdev.cmd`, `kern.yaml`, `psdev_script.py` | CLI grammar / kernel manifest / helper script. |
+
+---
+
+## 3. Key data structures
+
+`psdev_priv_t` (per pseudo netdev, `psdev_private.h`):
+
+```c
+typedef struct {
+    u32 psdev_id;
+    struct net_device *parent_dev;   // real ASIC netdev this pseudo dev binds to
+    u32 tx_def_qnum;
+} psdev_priv_t;
+```
+
+Global pseudo-dev / device handles (`psdev_main.c`): `ins_ps_inb`,
+`ins_app_inb`, `ins_ps_eobc`, `ins_lc_inb`, `mgmt_dev`.
+
+Cross-module function pointers (defined + `EXPORT_SYMBOL` in `psdev_main.c`,
+**set by `klm_vdc`** — see ADR-003):
+
+```c
+unsigned short (*skb_protocol_get_inb)(struct sk_buff *, struct net_device *) = NULL;
+unsigned short (*skb_protocol_get_mgmt)(struct sk_buff *, struct net_device *) = eth_type_trans;
+```
+
+Runtime-resolved external entry (via `kallsyms_lookup_name`, see ADR-002):
+`rni_handle_platform_lcnd` → `rni_handle_platform` (in `klm_rni_lcnd`).
+
+---
+
+## 4. Structural overview
+
+```mermaid
+flowchart LR
+    subgraph ASIC["ASIC netdevs (real)"]
+        L0["leaba0_0 / pie-eth0 / leaba12_0 / leaba11_5 / leaba11_0"]
+    end
+    subgraph MGMT0["mgmt netdev (IGB)"]
+        MG["mgmt_dev (mgmt0)"]
+    end
+    subgraph PSDEV["klm_psdev (this module)"]
+        SONE["ps_sone0_rx_handle_frame\n(ASIC rx_handler)"]
+        PSINB["ps-inb / ps-svc-inb\n(pseudo netdevs)"]
+        PSINBRX["psinb_rx_handle_frame\n(pseudo-dev rx_handler)"]
+        MGRX["mgmt_rx_handle_frame\n(mgmt rx_handler)"]
+        TX["psdev_start_xmit\n+ psdev_munge_pkt"]
+    end
+    subgraph EXT["External modules"]
+        VDC["klm_vdc\n(sets skb_protocol_get_inb)"]
+        RNI["klm_rni_lcnd\nrni_handle_platform"]
+        LCND["klm_lcnd\nlcnd_sone_inband_decap / _encap"]
+    end
+
+    L0 -- "RX punt" --> SONE
+    SONE -- "redirect skb->dev + normalize\nnetif_receive_skb" --> PSINB
+    PSINB --> PSINBRX
+    PSINBRX -- "handoff" --> RNI --> LCND
+    MG -- "RX punt (all platforms)" --> MGRX -- "handoff" --> RNI
+    VDC -. "fn-ptr" .-> SONE
+    LCND -- "TX inject: dev_queue_xmit(ps-inb)" --> TX
+    TX -- "skb->dev = parent_dev\ndev_queue_xmit" --> L0
+```
+
+---
+
+## 5. Lifecycle (`init_module` / `cleanup_module`)
+
+Ordered bring-up (`psdev_main.c`, `init_module`):
+
+1. **Card detection** — `get_card_index()` sets `my_card_index`; derive
+   `is_dpu_tor` (DESCHUTES/DANSBERG), `is_fretta_tor`, `is_fretta`.
+2. `platform_driver_register(&psdev_driver)`.
+3. **Create pseudo devs** — `ins_ps_eobc`, `ins_ps_inb`, and `ins_app_inb` iff
+   `is_dpu_tor` (via `ins_psuedo_dev_create`). `parent_dev` starts **NULL**.
+4. **EOBC / mbit** rx handlers.
+5. **`register_psinb_rx_handlers()`** — installs `psinb_rx_handle_frame` on
+   `ins_ps_inb` (and `ins_app_inb` under `is_dpu_tor`), under `rtnl_lock`.
+   Installed unconditionally at load (FLOW-004).
+6. **Per-platform ASIC rx handlers** — a card-index allowlist dispatch. For SONE:
+   `sone_register_pltfm_rx_handlers()` + `register_netdevice_notifier(&sone_netdev_notifier)`,
+   and `static_mgmt_rx_register = FALSE` (mgmt handled via the notifier, §7).
+7. **Register swover trigger** — `swover_trigger_register("psdev", psdev_swover_trigger)`
+   for LXC/ISSU (§7, §12).
+
+Teardown (`cleanup_module`): set `tearing_down = 1`;
+`unregister_psinb_rx_handlers()`; `unregister_netdevice_notifier(...)`;
+**`psdev_unregister_rx_handlers()`** releases `ins_ps_inb`/`ins_app_inb`
+`parent_dev` and `mgmt_dev` (`rtnl_lock` → `netdev_rx_handler_unregister` →
+`dev_put` → NULL → `synchronize_rcu`).
+
+---
+
+## 6. RX datapath (ingress: ASIC punt → LCND)
+
+See FLOW-007 / KSTACK-029 / KSTACK-030.
+
+```mermaid
+sequenceDiagram
+    participant HW as ASIC netdev
+    participant SONE as ps_sone0_rx_handle_frame
+    participant K as netif_receive_skb
+    participant PSINB as psinb_rx_handle_frame
+    participant RNI as rni_handle_platform (klm_rni_lcnd)
+    HW->>SONE: punted frame (rx_handler)
+    SONE->>SONE: skb->dev = ins_ps_inb / ins_app_inb
+    SONE->>SONE: normalize (eth restore, vlan clear, pkt_type, protocol)
+    SONE->>K: netif_receive_skb  (RX_HANDLER_CONSUMED)
+    K->>PSINB: rx_handler on ps-inb
+    PSINB->>PSINB: mbit short-circuit? resolve rni via kallsyms
+    PSINB->>RNI: skb = rni_handle_platform_lcnd(skb)
+    RNI-->>PSINB: NULL=CONSUMED / else PASS|ANOTHER
+```
+
+| Function | File | What / Why |
+|----------|------|------------|
+| `ps_sone0_rx_handle_frame` | `psdev_main.c` | ASIC-dev → pseudo-dev bridge + normalize. Redirects `skb->dev` to `ins_ps_inb`/`ins_app_inb`; restores eth hdr (app), pushes ETH_HLEN (GR2/P200) or clears vlan; sets `pkt_type=PACKET_HOST`; `skb->protocol = skb_protocol_get_inb(...)` (VDC classification, skipped on app path); `netif_receive_skb`; returns `RX_HANDLER_CONSUMED`. |
+| `netif_receive_skb` | kernel | Re-enters the stack on the pseudo dev so its own rx_handler fires. |
+| `psinb_rx_handle_frame` | `psdev_main.c` | Kstack RX entry/decision. mbit front-panel short-circuit (`RX_HANDLER_CONSUMED`); lazily resolve `rni_handle_platform` via `kallsyms_lookup_name` (else `PASS`); `skb = rni_handle_platform_lcnd(skb)` (NULL → `CONSUMED`); dev sanity → `RX_HANDLER_ANOTHER`; else `RX_HANDLER_PASS`. |
+| `rni_handle_platform` | **EXTERNAL** `infra/kstack/kspace/rni_lcnd/rni_lcnd.c` (`klm_rni_lcnd`) | Dispatches into `klm_lcnd` `handle_platform` → `lcnd_plat_decap` → `lcnd_sone_inband_decap`. RX leaves `klm_psdev` here. |
+
+**RX field transforms:** `skb->dev` (ASIC → pseudo); mac header pushed (app/GR2);
+`skb->vlan_tci`→0; `skb->pkt_type`→`PACKET_HOST`; `skb->protocol`←`skb_protocol_get_inb`.
+
+**Return-code semantics:** `CONSUMED` = ownership transferred (LCND/mbit), kernel
+stops; `PASS` = continue normal receive on `ps-inb`; `ANOTHER` = `skb->dev`
+changed, kernel re-runs rx_handler lookup.
+
+---
+
+## 7. Management-interface punt (`mgmt_dev`) — common across all platforms
+
+Unlike the ASIC-specific handlers, the **management netdev punt path is
+platform-independent**: every platform arm installs `mgmt_rx_handle_frame` on the
+mgmt interface and tracks it in the global `mgmt_dev`.
+
+- **Identity.** `mgmt_dev_name` is a module param (default `IGB_MGMT_DEV_NAME`,
+  e.g. `mgmt0`). `is_mgmt_dev(dev)` is true when `dev->name == mgmt_dev_name` **or**
+  `dev == mgmt_dev`.
+- **Handler.** `mgmt_rx_handle_frame(pskb)`: if `skb->dev == mgmt_dev`, resolve
+  `rni_handle_platform` via `kallsyms_lookup_name` and hand off
+  `skb = rni_handle_platform_lcnd(skb)` (NULL → `RX_HANDLER_CONSUMED`); else
+  `RX_HANDLER_PASS`. **It punts straight to LCND — it does NOT use the pseudo-dev
+  redirect** (`ps-inb`). So mgmt inband is a parallel, pseudo-dev-free punt path
+  that shares only the external `rni_handle_platform` boundary.
+- **Registration (three ways, all platforms):**
+  1. **Static at init** — `register_mgmt_rx_handlers()` →
+     `tor_register_mgmt_handler` (2nd vSup ToR, `mgmt_ns_id != -1`) or
+     `register_rx_handler` (else); sets `mgmt_dev`. Used when
+     `static_mgmt_rx_register == TRUE`.
+  2. **Deferred via each platform's notifier** — `tahoe_netdev_event`,
+     `teralynx_netdev_event`, `sone_netdev_event`, … all check `is_mgmt_dev(dev)`
+     on `NETDEV_REGISTER`, register `mgmt_rx_handle_frame`, `dev_hold`, and set
+     `mgmt_dev`. Platform arms that prefer this set `static_mgmt_rx_register = FALSE`
+     (Tahoe, SONE, and the default/knet arm).
+  3. **ISSU/LXC swover** — `swover_register_mgmt_handler(mgmt_dev_name, mgmt_rx_handle_frame)`
+     re-installs on the new instance during `psdev_swover_trigger`.
+- **Cleanup.** `psdev_unregister_rx_handlers()` and each notifier's
+  `NETDEV_UNREGISTER` case unregister and `dev_put(mgmt_dev)`; a mgmt-flip guard
+  (`dev->rx_handler == mgmt_rx_handle_frame`) avoids double-unregister when an old
+  instance is torn down after a swover.
+
+> The IGB mgmt PHY may also be (re)initialized per card via `ins_igb_phy_init_sse`
+> (BELLEVUE / ST_MORITZ / BIFROST / …) at mgmt registration.
+
+---
+
+## 8. TX datapath (egress: LCND inject → ASIC)
+
+See KSTACK-020 (+ FLOW-002 stub for the LCND encap that precedes it).
+
+```mermaid
+sequenceDiagram
+    participant LCND as klm_lcnd (lcnd_*_encap)
+    participant XMIT as psdev_start_xmit
+    participant MUNGE as psdev_munge_pkt
+    participant K as dev_queue_xmit
+    participant HW as parent ASIC netdev
+    LCND->>XMIT: dev_queue_xmit(ps-inb) → ndo_start_xmit
+    XMIT->>XMIT: skb->dev = psd_priv->parent_dev (else drop)
+    XMIT->>MUNGE: if !is_fretta_tor
+    MUNGE->>MUNGE: HG no-op / RCPU 802.1Q / EPC hdr rewrite
+    XMIT->>K: dev_queue_xmit(skb)
+    K->>HW: qdisc → wire
+```
+
+| Function | File | What / Why |
+|----------|------|------------|
+| `psdev_start_xmit` | `psdev_main.c` | `ndo_start_xmit` for pseudo devs. A pseudo dev has no HW queue, so it re-points `skb->dev = psd_priv->parent_dev` and bumps TX stats (inside the `parent_dev` guard — only count real egress). `is_fretta_tor` re-targets via `get_knet_dev` (`mac_inst=(data[5]>>3)-1`). No parent → `dev_kfree_skb` DROP. |
+| `psdev_munge_pkt` | `psdev_main.c` | L2-only header fixup (skipped on fretta). Three mutually-exclusive arms: HG header no-op; RCPU → insert 802.1Q tag knet expects; EPC-SUP-smac → rewrite dmac/smac/tpid(`EPC_TPID`)/vid(`EPC_VID`). On plain SONE (`is_knet0_dev`=false) only the EPC arm can fire → usually a no-op. Never reassigns `skb->dev`/frees. |
+| `dev_queue_xmit` | kernel | Hands to the parent ASIC netdev qdisc/driver → wire. TX leaves `klm_psdev`. |
+
+---
+
+## 9. RX-handler registration & `parent_dev` coupling
+
+See KSTACK-032. The upstream ASIC rx_handler (`ps_sone0_rx_handle_frame`) is
+installed on a **card-index-dependent** ASIC netdev set, and the **same** `dev`
+is stored as the pseudo dev's `parent_dev` (RX-capture dev == TX-egress dev).
+
+Two registration sites resolve the identical dev-name set from `my_card_index`:
+- **init**: `sone_register_pltfm_rx_handlers()` (name switch + `dev_get_by_name`).
+- **deferred**: `sone_netdev_event` on `NETDEV_REGISTER`, gated by `is_sone0_dev(dev)`.
+
+Both, on success, set `ins_app_inb->parent_dev = dev` (for `pie-eth0` under
+`is_dpu_tor`) or `ins_ps_inb->parent_dev = dev`. **Cleared to NULL** on
+`sone_netdev_event` `NETDEV_UNREGISTER` and in `psdev_unregister_rx_handlers()`
+(module exit/cleanup) — **not** in `psdev_swover_sone` (see §12 / ADR-010).
+
+| Card index (codename) | ASIC netdev(s) | Dev macro |
+|-----------------------|----------------|-----------|
+| DESCHUTES, DANSBERG (DPU-TOR) | `leaba0_0` + `pie-eth0` | `TOR_SONE_KPKT_DEV` + `TOR_SONE_PIE_DEV` |
+| BUD_LIGHTNING, OPTIMATOR, BUD_LIGHTNING_X, SARGO (GR2, `!vmachine`) | `leaba12_0` | `TOR_SONE_GR2_KPKT_DEV` |
+| MUSTANG (P200, `!vmachine`) | `leaba11_5` | `TOR_SONE_P200_KPKT_DEV` |
+| OPTIMATOR_X | `leaba11_0` + `leaba12_0` | `TOR_SONE_GR2_AMD_KPKT_DEV` + `TOR_SONE_GR2_KPKT_DEV` |
+| default (LAKEFRONT/ALLAGASH/SPACEDUST/EASTLAKE/CROCODILE/TP_WBOX_*, and GR2/MUSTANG under `vmachine`) | `leaba0_0` | `TOR_SONE_KPKT_DEV` |
+
+Caveats: `!vmachine` gate (GR2/MUSTANG fall to `leaba0_0` on a VM);
+`pie-eth0` is DPU-TOR-only; SONE-family ASIC ≠ this handler (N9800
+sups/Titan/Nvidia/modular are outside the allowlist); mgmt netdev uses
+`mgmt_rx_handle_frame` (§7). Codename→PID map: FLOW-006.
+
+---
+
+## 10. External interactions / boundaries
+
+| Boundary | Direction | Mechanism | Notes |
+|----------|-----------|-----------|-------|
+| `klm_rni_lcnd` (`rni_handle_platform`) | RX out | `kallsyms_lookup_name` runtime resolve | ADR-002. RX leaves module here (both `ps-inb` and `mgmt_dev` paths). |
+| `klm_vdc` (`eth_type_trans_inb/_mgmt`) | RX in | Sets exported fn-ptrs `skb_protocol_get_inb/_mgmt` | ADR-003. NULL until VDC loads. |
+| `klm_lcnd` (`lcnd_*_encap`) | TX in | Calls `dev_queue_xmit(ps-inb)` | Injects frames for egress. |
+| `klm_lcnd` (`lcnd_platform_hdlr_change`) | ctrl | Called from `psdev_sse.c` on FC notify | Fabric-card presence. |
+| swover infra (`swover_trigger_register/_invoke`) | ctrl | `psdev_swover_trigger` | LXC/ISSU handler re-install (SONE = no-op, ADR-010). |
+| Kernel netdev/qdisc | RX/TX | `netif_receive_skb` / `dev_queue_xmit` / rx_handler framework | Standard netdev plumbing. |
+| MTS / SYSSRV | ctrl | `psdev_cli.c` (MTS opcodes), `psdev_sse.c` (SYSSRV events) | CLI + fabric events. |
+
+---
+
+## 11. Concurrency & locking
+
+- rx_handler (un)registration wrapped in `rtnl_lock`/`rtnl_unlock`.
+- `parent_dev` / `mgmt_dev` references held via `dev_hold` at register, released
+  via `dev_put` at unregister/teardown; `synchronize_rcu()` on bulk teardown.
+- rx_handlers run in softirq (NAPI) context; return codes drive kernel
+  re-dispatch. `rcu_dereference(dev->rx_handler)` used to check existing handlers.
+- `tearing_down` (`READ_ONCE`) guards against handling synthetic netdev events
+  emitted during `unregister_netdevice_notifier`.
+
+---
+
+## 12. Error handling / edge cases
+
+- **Pre-registration TX**: `parent_dev == NULL` → `psdev_start_xmit` drops
+  (`dev_kfree_skb`). TX only works once the ASIC handler has registered.
+- **Missing `rni_handle_platform`**: `psinb_rx_handle_frame` /
+  `mgmt_rx_handle_frame` degrade to `RX_HANDLER_PASS` (frame not punted), no crash.
+- **`skb_protocol_get_inb == NULL`** (klm_vdc not yet loaded): protocol left
+  as-is (no VDC classification); some sibling paths (mgmt/eobc) treat NULL as a
+  drop path.
+- **SONE ISSU/LXC swover**: `psdev_swover_sone` is a **no-op in the current code**
+  — it logs `"Ignoring swover ISSU for intf %s"` and returns. SONE relies on
+  persistent pseudo devs + the notifier to keep handlers valid across the swover,
+  so no re-install is needed. (Older releases had active re-install logic here;
+  Tahoe/knet still do via `psdev_swover_tahoe`/`psdev_swover_knet`.) See ADR-010.
+
+---
+
+## 13. Architecture Decision Records (ADR)
+
+Format: Status / Context / Decision / Consequences. Decisions are inferred from
+the current source (2026-07-09) and documented to prevent regressions and
+conflicting refactors.
+
+### ADR-001 — Pseudo netdevices as the punt/inject abstraction
+- **Status**: Accepted (in force).
+- **Context**: The real ASIC punt/inject interfaces vary by platform (`leaba0_0`,
+  `pie-eth0`, `leaba12_0`, …), may appear after module load, and deliver the L2
+  header inconsistently. Upper layers (LCND, sockets) need a single stable device.
+- **Decision**: Expose stable pseudo netdevs (`ps-inb`, `ps-svc-inb`, `ps-eobc`).
+  On RX, `ps_sone0_rx_handle_frame` redirects `skb->dev` to a pseudo dev and
+  normalizes; on TX, `psdev_start_xmit` re-points to the real `parent_dev`.
+- **Consequences**: (+) Stable binding independent of ASIC dev churn; single RX
+  entry/TX exit for Kstack. (−) Extra receive hop; a `parent_dev` wiring step is
+  mandatory before TX works.
+
+### ADR-002 — Resolve `rni_handle_platform` at runtime via `kallsyms`
+- **Status**: Accepted.
+- **Context**: The LCND punt entry lives in a **separate** module (`klm_rni_lcnd`)
+  with an independent load order relative to `klm_psdev`.
+- **Decision**: Do not link against it. Lazily resolve
+  `rni_handle_platform_lcnd = kallsyms_lookup_name("rni_handle_platform")` on
+  first RX; if unresolved, return `RX_HANDLER_PASS`.
+- **Consequences**: (+) No hard inter-module link dependency; tolerant of load
+  order; graceful degradation. (−) A renamed/missing symbol silently stops
+  punting (frames just PASS); the dependency is invisible to the module loader.
+
+### ADR-003 — `skb_protocol_get_inb/_mgmt` owned by `klm_psdev`, set by `klm_vdc`
+- **Status**: Accepted.
+- **Context**: VDC queue-ethertype classification belongs to `klm_vdc`, but the RX
+  handlers that need it live in `klm_psdev`, and VDC may load after psdev.
+- **Decision**: `klm_psdev` **defines + exports** the fn-ptrs (init NULL /
+  `eth_type_trans`); `klm_vdc.vdc_module_init` installs `eth_type_trans_inb/_mgmt`,
+  `vdc_module_exit` NULLs them. All call sites are guarded.
+- **Consequences**: (+) Load-order tolerant; clean separation. (−) Before VDC
+  loads, frames are not VDC-classified, and some paths treat NULL as a drop;
+  behavior is load-order-sensitive. (KSTACK-031.)
+
+### ADR-004 — Bind `parent_dev` at rx-handler registration time
+- **Status**: Accepted.
+- **Context**: The ASIC netdev used for RX capture is the same one to inject on
+  for TX; it may be deferred or replaced.
+- **Decision**: Set `parent_dev = dev` (with `dev_hold`) at the moment the ASIC
+  rx_handler registers (init + `NETDEV_REGISTER`); clear (with `dev_put`) at
+  `NETDEV_UNREGISTER` / `psdev_unregister_rx_handlers`. RX-capture dev == TX-egress dev.
+- **Consequences**: (+) TX target tracks device lifecycle. (−) TX before
+  registration is dropped; two register sites must keep the same pairing logic.
+  (KSTACK-032.)
+
+### ADR-005 — Per-card-index ASIC dev-name mapping + netdev notifier
+- **Status**: Accepted.
+- **Context**: Different SONE cards expose different `leaba*/pie-eth0` names, and
+  some devices appear after `init_module`.
+- **Decision**: A `my_card_index` switch selects the dev name(s); the identical
+  switch is used in both `sone_register_pltfm_rx_handlers` (init) and
+  `is_sone0_dev` (notifier gate), plus a `sone_netdev_notifier` for late devices.
+- **Consequences**: (+) One mapping per card; init and deferred paths stay
+  consistent. (−) **Two copies of the switch** (`sone_register_pltfm_rx_handlers`
+  and `is_sone0_dev`) plus the `init_module` SONE allowlist are **three** places a
+  new card must be added — a drift hazard.
+
+### ADR-006 — `RX_HANDLER_{CONSUMED,PASS,ANOTHER}` contract
+- **Status**: Accepted.
+- **Context**: The driver rides the kernel `rx_handler` framework and must signal
+  ownership transfer to LCND vs. normal delivery vs. dev re-dispatch.
+- **Decision**: `CONSUMED` when LCND/mbit takes the skb; `PASS` to continue normal
+  receive; `ANOTHER` when `skb->dev` changed and the kernel must re-run lookup.
+- **Consequences**: (+) Correct interop with kernel + LCND ownership. (−)
+  Semantics are subtle; mis-returning leaks/double-frees skbs.
+
+### ADR-007 — mbit front-panel short-circuit before LCND
+- **Status**: Accepted (mbit-capable cards only).
+- **Context**: mbit-capable cards divert some inband frames to a front-panel dev.
+- **Decision**: `psinb_rx_handle_frame` checks `IS_MBIT_SUPPORTED(my_card_index)`
+  and `mbit_tx_to_fp_dev(skb)` first; on hit returns `RX_HANDLER_CONSUMED`.
+- **Consequences**: (+) Keeps the front-panel divert out of the LCND path. (−)
+  Adds a card-index-gated branch on the hot RX path.
+
+### ADR-008 — TX munge is minimal, L2-only, and gated
+- **Status**: Accepted.
+- **Context**: Only certain egress paths (knet HG/RCPU, EPC) need an outer-header
+  fixup; plain SONE inject needs none.
+- **Decision**: `psdev_munge_pkt` runs only when `!is_fretta_tor`, and its arms
+  are gated by `is_knet0_dev(skb->dev)` / EPC source-MAC. It never reassigns
+  `skb->dev` or frees.
+- **Consequences**: (+) Ordinary SONE punt-inject is a near no-op; low overhead.
+  (−) Behavior depends on capturing dev + outer MAC bytes, not derivable from
+  static code alone.
+
+### ADR-009 — Management punt is a separate, platform-independent path
+- **Status**: Accepted.
+- **Context**: The mgmt interface (`mgmt0`) must punt inband to Kstack on every
+  platform, but it is a normal IGB netdev, not an ASIC pseudo-dev.
+- **Decision**: Install a dedicated `mgmt_rx_handle_frame` on `mgmt_dev` (tracked
+  globally) across all platform arms; punt it **directly** to `rni_handle_platform`
+  without the `ps-inb` pseudo-dev redirect.
+- **Consequences**: (+) Uniform mgmt punt independent of ASIC family; shares only
+  the LCND boundary. (−) A second registration/lifecycle to manage (static +
+  per-notifier + swover), with mgmt-flip guards needed during swover.
+
+### ADR-010 — SONE ISSU/LXC swover is intentionally a no-op
+- **Status**: Accepted (SONE); contrast with Tahoe/knet.
+- **Context**: On an LXC/ISSU swover, some platforms must re-install ASIC
+  rx_handlers on the new active instance. SONE keeps persistent pseudo devs and a
+  netdev notifier that already maintains handler validity.
+- **Decision**: `psdev_swover_sone` deliberately does nothing (logs "Ignoring
+  swover ISSU") — SONE does not re-install on swover. `parent_dev`/handler
+  teardown happens only via `NETDEV_UNREGISTER` and `psdev_unregister_rx_handlers`.
+  Tahoe/knet keep active re-install (`psdev_swover_tahoe`/`psdev_swover_knet`).
+- **Consequences**: (+) Simpler SONE swover; no re-register races. (−) Divergent
+  swover behavior per platform; **older releases had active SONE swover code**, so
+  cross-release comparisons/backports must not assume this no-op. (KSTACK-032 note.)
+- **Teardown/refcnt**: the real teardown (`psdev_unregister_rx_handlers` + `ins_ps_inb`
+  unregister) force-zeros `ins_ps_inb`'s per-CPU refcount after a bounded 500 ms wait —
+  a symptom fix for the "waiting for ps-inb to become free" hang whose leaked-ref holder
+  is still unaddressed (UAF hazard). See **KSTACK-036**.
+
+---
+
+## 14. Cross-reference to Kstack knowledge base
+
+| KB record | Topic |
+|-----------|-------|
+| FLOW-004 / KSTACK-019 | Driver bring-up + rx-handler registration |
+| FLOW-007 | SONE `ps-inb` RX datapath (§6) |
+| KSTACK-029 | `psinb_rx_handle_frame` RX entry + rni handoff |
+| KSTACK-030 | `ps_sone0_rx_handle_frame` ASIC→ps-inb redirect + normalize |
+| KSTACK-031 | `skb_protocol_get_inb/_mgmt` owned by psdev, set by `klm_vdc` |
+| KSTACK-032 | SONE ASIC netdev set per card index + `parent_dev` coupling (incl. swover no-op) |
+| KSTACK-020 | `psdev_start_xmit` TX → parent + `psdev_munge_pkt` detail |
+| FLOW-006 | Silicon One codename → PID → ASIC map |
+| KSTACK-036 | `cleanup_module` force-zeros `ins_ps_inb` pcpu_refcnt (CSCwn95874); UAF holder open |
+
+---
+
+## 15. Kernel-version compatibility (LINUX_VERSION_CODE guards)
+
+`klm_psdev` guards kernel-API churn with `LINUX_VERSION_CODE` (`psdev_main.c`,
+`psdev_create.c`). Anchor on the API names, not the version numbers:
+
+- **dev MAC set** — `psdev_set_mac_address`: `eth_hw_addr_set(dev, sa->sa_data)` for
+  `>= KERNEL_VERSION(6,6,0)`, else `memcpy(dev->dev_addr, …)`. (CSCwp62964.)
+- **private ioctl** — `psdev_netdev_ops.ndo_siocdevprivate = psdev_ioctl` for `>= 6,6,0`,
+  else `.ndo_do_ioctl = psdev_ioctl`. (CSCwp83497.)
+- **select_queue** — `psdev_select_queue` signature switches at 5,10,0 / 4,19,0 (the
+  `select_queue_fallback_t fallback` arg is dropped on newer kernels). (5.10 shim.)
+- **change_mtu** — `psdev_change_mtu` installed as `.ndo_change_mtu` (replaces the removed
+  `eth_change_mtu`). (a2g 5.10/5.6 compat drop, CSCuv05709 lineage.)
+
+These are cross-kernel-port companions: a backport/forward-port that touches the netdev-ops
+table or MAC/ioctl paths must carry the matching guard, or the build breaks on the other
+kernel. Anchor on the `ndo_*` field names + the helper names.
+
+---
+
+*Cisco Highly Confidential — internal architecture reference. SONE-focused for the ASIC datapath

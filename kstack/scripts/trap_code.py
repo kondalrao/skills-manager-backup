@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""Decode a Silicon One trap code (la_event_e) to its name for a given PID.
+
+Reads the SDK header:
+    standalone/third-party/src/siliconone-sdk/<sdk-dir>/include/api/types/la_event.h
+and resolves the C++ `enum class la_event_e` with full C enum semantics
+(auto-increment + aliases + explicit values).
+
+PID map (friendly name -> sdk dir):
+    g200 -> gr2 | krypton -> krypton | p200 -> palladium2 | g2ll -> g2ll
+(You may also pass an sdk dir name directly, e.g. --pid gr2.)
+
+Usage:
+    trap_code.py --pid g200 --code 4            # -> ETHERNET_ARP
+    trap_code.py --pid g200 --code 0xdf         # hex code accepted
+    trap_code.py --pid krypton --code 4 --all   # list every alias at that value
+    trap_code.py --pid g200 --code ETHERNET_ARP # reverse: name -> value
+    trap_code.py --header /path/to/la_event.h --code 4   # bypass PID/repo lookup
+    trap_code.py --repo /path/to/repo --pid p200 --code 116
+
+Repo resolution order: --header > --repo > $KSTACK_REPO > auto-detect upward from CWD.
+Output: the trap name on stdout (errors to stderr, non-zero exit). Decoded values
+are for reference only -- do NOT store them as facts (they are PID/build specific).
+"""
+import argparse
+import os
+import re
+import sys
+
+# Friendly PID name -> siliconone-sdk directory name.
+PID_TO_SDK_DIR = {
+    "g200": "gr2",
+    "krypton": "krypton",
+    "p200": "palladium2",
+    "g2ll": "g2ll",
+}
+
+HEADER_REL = "include/api/types/la_event.h"
+SDK_REL = os.path.join("standalone", "third-party", "src", "siliconone-sdk")
+ENUM_NAME = "la_event_e"
+
+# Names that are structural markers, not real trap names.
+_MARKER_RE = re.compile(r"^(FIRST|LAST|NONE|FULL_MASK)$|(_FIRST|_LAST)$")
+
+
+def resolve_sdk_dir(pid: str) -> str:
+    """Map a friendly PID (or accept an sdk dir name) to the sdk directory."""
+    key = pid.strip().lower()
+    return PID_TO_SDK_DIR.get(key, key)
+
+
+def find_repo_root(explicit):
+    """Locate the repo root that contains the siliconone-sdk tree."""
+    candidates = []
+    if explicit:
+        candidates.append(explicit)
+    if os.environ.get("KSTACK_REPO"):
+        candidates.append(os.environ["KSTACK_REPO"])
+    # Auto-detect: walk up from CWD looking for the SDK subtree.
+    cur = os.getcwd()
+    while True:
+        candidates.append(cur)
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            break
+        cur = parent
+    for root in candidates:
+        if root and os.path.isdir(os.path.join(root, SDK_REL)):
+            return root
+    return None
+
+
+def resolve_header(args) -> str:
+    if args.header:
+        if not os.path.isfile(args.header):
+            sys.exit(f"error: --header not found: {args.header}")
+        return args.header
+    if not args.pid:
+        sys.exit("error: --pid is required (or use --header)")
+    sdk_dir = resolve_sdk_dir(args.pid)
+    repo = find_repo_root(args.repo)
+    if not repo:
+        sys.exit(
+            "error: could not locate the repo (no '%s' found). "
+            "Pass --repo <repo-root>, set $KSTACK_REPO, or use --header <path>."
+            % SDK_REL
+        )
+    header = os.path.join(repo, SDK_REL, sdk_dir, HEADER_REL)
+    if not os.path.isfile(header):
+        sys.exit(
+            "error: header for PID '%s' (sdk dir '%s') not found:\n  %s\n"
+            "Known PID map: %s"
+            % (args.pid, sdk_dir, header,
+               ", ".join("%s->%s" % kv for kv in PID_TO_SDK_DIR.items()))
+        )
+    return header
+
+
+def strip_comments(text: str) -> str:
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)  # /* ... */
+    text = re.sub(r"//[^\n]*", "", text)                      # // ...
+    return text
+
+
+def extract_enum_body(text: str, enum_name: str) -> str:
+    m = re.search(r"enum\s+class\s+%s\b[^{]*\{" % re.escape(enum_name), text)
+    if not m:
+        sys.exit("error: 'enum class %s' not found in header" % enum_name)
+    start = m.end()
+    end = text.find("}", start)
+    if end == -1:
+        sys.exit("error: unterminated enum body for %s" % enum_name)
+    return text[start:end]
+
+
+def _eval_expr(expr: str, names: dict) -> int:
+    """Evaluate a C enum initializer: literal, known name, or simple +/- of them.
+
+    No eval(); tokens are restricted to identifiers, int/hex literals, and +/-.
+    """
+    tokens = re.findall(r"[A-Za-z_]\w*|0[xX][0-9a-fA-F]+|\d+|[+\-]", expr)
+    if not tokens:
+        raise ValueError("empty initializer: %r" % expr)
+
+    def value_of(tok: str) -> int:
+        if re.fullmatch(r"0[xX][0-9a-fA-F]+", tok):
+            return int(tok, 16)
+        if re.fullmatch(r"\d+", tok):
+            return int(tok)
+        if tok in names:
+            return names[tok]
+        raise KeyError("unknown enumerator in initializer: %s" % tok)
+
+    total = value_of(tokens[0])
+    i = 1
+    while i < len(tokens):
+        op = tokens[i]
+        operand = value_of(tokens[i + 1])
+        total = total + operand if op == "+" else total - operand
+        i += 2
+    return total
+
+
+def parse_enum(body: str):
+    """Return (order, name_to_value) honoring C enum auto-increment semantics."""
+    order = []           # list of (name, value) in declaration order
+    name_to_value = {}
+    counter = 0
+    for raw in body.split(","):
+        item = raw.strip()
+        if not item:
+            continue
+        if "=" in item:
+            name, expr = item.split("=", 1)
+            name = name.strip()
+            if not re.fullmatch(r"[A-Za-z_]\w*", name):
+                continue
+            value = _eval_expr(expr, name_to_value)
+        else:
+            name = item
+            if not re.fullmatch(r"[A-Za-z_]\w*", name):
+                continue
+            value = counter
+        name_to_value[name] = value
+        order.append((name, value))
+        counter = value + 1
+    return order, name_to_value
+
+
+def canonical_name(order, value: int):
+    """Pick the real trap name at `value`, skipping FIRST/LAST/NONE markers."""
+    matches = [n for n, v in order if v == value]
+    if not matches:
+        return None, []
+    real = [n for n in matches if not _MARKER_RE.search(n)]
+    chosen = real[0] if real else matches[0]
+    return chosen, matches
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(
+        description="Decode a Silicon One trap code (la_event_e) to its name.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="PID map: " + ", ".join("%s->%s" % kv for kv in PID_TO_SDK_DIR.items()),
+    )
+    p.add_argument("--pid", help="friendly PID (g200/krypton/p200/g2ll) or sdk dir name")
+    p.add_argument("--code", required=True,
+                   help="trap code: int (decimal or 0xhex), or an enum name for reverse lookup")
+    p.add_argument("--repo", help="repo root containing %s" % SDK_REL)
+    p.add_argument("--header", help="direct path to a la_event.h (bypasses PID/repo lookup)")
+    p.add_argument("--all", action="store_true",
+                   help="print every enumerator name sharing the value")
+    args = p.parse_args()
+
+    header = resolve_header(args)
+    text = strip_comments(open(header, "r", encoding="utf-8", errors="replace").read())
+    body = extract_enum_body(text, ENUM_NAME)
+    order, name_to_value = parse_enum(body)
+
+    # Reverse lookup: --code is a name -> print its numeric value.
+    code_str = args.code.strip()
+    if not re.fullmatch(r"0[xX][0-9a-fA-F]+|\d+", code_str):
+        key = code_str.upper()
+        if key not in name_to_value:
+            print("error: enum name not found: %s" % code_str, file=sys.stderr)
+            return 2
+        val = name_to_value[key]
+        print("%s = %d (0x%x)" % (key, val, val))
+        return 0
+
+    code = int(code_str, 0)
+    chosen, matches = canonical_name(order, code)
+    if chosen is None:
+        print("error: trap code %d (0x%x) not defined in %s for this PID"
+              % (code, code, ENUM_NAME), file=sys.stderr)
+        return 2
+    if args.all:
+        print(" ".join(matches))
+    else:
+        print(chosen)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

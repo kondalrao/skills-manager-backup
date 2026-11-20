@@ -1,0 +1,37 @@
+Process lifecycle & threading (kim.c)
+
+  main()
+    |
+    v
+  arg parse (-d debug)
+    |
+    v
+  kim_init / kim_ns_init / kim_mem_init
+    |
+    v
+  kim_ha_init  (register 7 PSS records + HA callbacks)
+    |
+    v
+  kim_mcec_init
+    |
+    v
+  kim_mts_bind  (smq, kimq, kim_mts_stats_q) + register kim_notifs[]
+    |
+    v
+  == sup state? ==============================================
+    |                                        |
+    | ACTIVE                                 | STANDBY
+    v                                        v
+  kim_active_init                          kim_standby_init
+   (create pseudo-netdevs)                   |
+    |                                        v
+    v                                      kim_standby_loop()
+  kim_active_loop()                        +--------------------------+
+  +----------------------------------+     | single thread:           |
+  | pthread kim_process_heart_msg    |     |  heart msgs only;        |
+  |   -> smq (MTS_SAP_KIM_SYSMGR)    |     |  DROP all notifs         |
+  | pthread kim_process_my_msg       |     |  (PSS sync via ksink)    |
+  |   -> kimq (notif dispatch)       |     +--------------------------+
+  | pthread kim_nb_thread_main       |            |
+  |   -> netlink (kim_nb.c)          | <----------+  standby -> active
+  +----------------------------------+

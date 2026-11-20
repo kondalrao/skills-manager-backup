@@ -1,0 +1,13 @@
+> Auto-generated replica of the **kstack** skill (`~/.agents/skills/kstack`). Edit the skill source, not these Confluence pages. Changes appear on the next sync run.
+
+This page tree mirrors the on-disk skill layout. Markdown tables are rendered as native Confluence tables; mermaid diagrams are rendered as ASCII.
+
+## Sections
+
+- `SKILL.md`
+- `KNOWLEDGE.md`
+- `USAGE_COUNTS.md`
+- `knowledge/`
+- `references/`
+- `architecture/`
+- `scripts/`

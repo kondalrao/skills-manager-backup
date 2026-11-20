@@ -1,0 +1,113 @@
+# FLOW-004: klm_psdev (ps-inb driver) init + RX-handler registration
+
+- **FLOW**: FLOW-004
+- **protocol**: (infra) inband driver bring-up / netdev RX-handler registration
+- **platform**: Silicon One -- **Krypton DPU-TOR** (`is_dpu_tor` path; verified on
+  `CARD_INDEX_DESCHUTES`). Non-DPU SONE TORs and other ASICs take sibling branches.
+- **status**: verified
+- **date**: 2026-06-18
+- **source**: `standalone/platform/insieme/drivers/emon_psdev/kspace/psdev_main.c`
+  (`klm_psdev`, EXTERNAL to `standalone/infra/kstack/`). Card-index defines in
+  `standalone/global/export/platform/card_data.h`.
+
+`klm_psdev` is the lowest in-kernel module of the SONE inband RX punt chain
+(Domain Map): it owns the `ps-inb`/`ps-svc-inb` pseudo netdevs and attaches
+`netdev_rx_handler`s to the real ASIC/mgmt netdevs so punted frames flow ASIC ->
+`ps_sone0_rx_handle_frame` -> `ps-inb` -> `psinb_rx_handle_frame` -> LCND.
+
+> All line numbers/driver-version/ifindex/MAC values below are VOLATILE as-of
+> hints. Anchor on the **function names**, **trace-string literals**, and the
+> **`CARD_INDEX_*` / `TOR_SONE_*_DEV` macro names**. Re-derive everything per
+> session. (KNOWLEDGE.md VOLATILE-vs-STABLE banner.)
+
+## Ordered steps (DPU-TOR / `is_dpu_tor` branch)
+
+1. **`init_module`** ("psdev: Initializing"):
+   `get_card_index(&my_card_index)`. For
+   `my_card_index == CARD_INDEX_DANSBERG || == CARD_INDEX_DESCHUTES` it sets
+   `is_dpu_tor = true` ("setting is_dpu_tor to true"). These are the only two
+   `CARD_INDEX_*` that set `is_dpu_tor` here (KSTACK-019).
+
+2. **Pseudo netdev creation** via `ins_psuedo_dev_create` ("psdev: Created device
+   %s"): `ps-eobc` (idx 0), `ps-inb` (idx 1). Because `is_dpu_tor`, a THIRD
+   pseudo dev `ps-svc-inb` (`ins_app_inb`, the `app_inb` name) is also created.
+   (Non-DPU does NOT create `ins_app_inb`.)
+
+3. **`register_psinb_rx_handlers`**: `netdev_rx_handler_register(ins_ps_inb,
+   psinb_rx_handle_frame)` -> "RX Handler registration on ps-inb SUCCESS". Because
+   `is_dpu_tor`, it ALSO registers `psinb_rx_handle_frame` on `ins_app_inb`
+   (`ps-svc-inb`) -> "RX Handler registration on ps-svc-inb SUCCESS". Then
+   init_module logs "register_psinb_rx_handlers res success for dev[ps-inb]".
+
+4. **Platform dispatch (DESCHUTES/DANSBERG arm)** -> calls
+   **`sone_register_pltfm_rx_handlers`** then
+   `register_netdevice_notifier(&sone_netdev_notifier)`; `static_mgmt_rx_register`
+   set FALSE (mgmt rx handler installed via the notifier, not statically).
+
+5. **`sone_register_pltfm_rx_handlers`** ("Registering sone pltfm rx handlers";
+   logs `my_card_index / is_dpu_tor / vmachine`). Branch selection by card_index:
+   - `is_dpu_tor` arm -> `sone_dev_names = { TOR_SONE_KPKT_DEV="leaba0_0",
+     TOR_SONE_PIE_DEV="pie-eth0" }`, `num_sone_devs = 2`.
+   For each: `dev_get_by_name` then `netdev_rx_handler_register(dev,
+   ps_sone0_rx_handle_frame)`:
+   - `leaba0_0`: typically **"sone dev leaba0_0 not found at init"** -- the leaba
+     ASIC NIC driver loads LATER, so it is registered later by the notifier
+     (step 8), not here.
+   - `pie-eth0`: **"Registered sone rx handler on pie-eth0"** (success). Parent
+     wiring: PIE dev (`is_dpu_tor && name==PIE`) -> `ins_app_inb->parent_dev`;
+     any other sone dev -> `ins_ps_inb->parent_dev`.
+
+6. **`register_netdevice_notifier(&sone_netdev_notifier)`** fires synthetic
+   `NETDEV_REGISTER` for every EXISTING netdev -> `sone_netdev_event` (gated by
+   `is_sone0_dev(dev) || is_mgmt_dev(dev)`):
+   - **eth1** (mgmt dev, `igb` driver): mgmt branch -> "registering dev:eth1".
+   - **pie-eth0** (sone0 dev): sone branch -> "registering rx handler for
+     dev:pie-eth0" -> `netdev_rx_handler_register` **fails** ->
+     **"Cannot register RX handler on Silicon one device"**. This is BENIGN: it is
+     a DOUBLE registration -- pie-eth0 was already registered in step 5, so the
+     synthetic re-register returns `-EBUSY`. (KSTACK-019.)
+
+7. **`psdev_sdwrap_init`** ("psdev_sdwrap_init:NNN sdwrap is initialized.") and
+   **`swover_trigger_unregister("psdev")` / `swover_trigger_register("psdev",
+   psdev_swover_trigger)`** ("swover_trigger unregister/register/registered for
+   psdev") complete init. `init_module` returns 0.
+
+8. **Deferred `leaba0_0` registration** (later, when the leaba ASIC NIC driver
+   loads -- `leaba_module_device ... leaba0_0: added/activated`):
+   `sone_netdev_event` `NETDEV_REGISTER` for `leaba0_0` -> sone branch ->
+   "registering rx handler for dev:leaba0_0" -> SUCCEEDS (no "Cannot register"
+   after it, because step 5 never registered it). Parent (non-PIE) ->
+   `ins_ps_inb->parent_dev = leaba0_0`. After this, `ps-inb` is wired to the
+   ASIC kpkt netdev and the punt RX path is live.
+
+## mgmt-dev (`eth1`) driver transitions on DPU-TOR (observed, session-specific)
+
+`eth1` is the mgmt netdev (`is_mgmt_dev`, matches `mgmt_dev_name`). During DPU
+bring-up it re-binds across drivers; `sone_netdev_event` logs each
+`get_drvinfo` driver_name:
+- `igb` -> normal mgmt register.
+- `ionic` -> **explicitly ignored**: "ionic driver detected: Ignoring the psdev
+  rx-handler registration" (early `return 0` before the event switch).
+- `veth` -> CHANGENAME/CHANGEADDR/UP events pass through the mgmt path.
+This driver churn is platform/bring-up specific; the durable fact is only the
+ionic-ignore short-circuit.
+
+## Divergence points / sibling branches (do NOT cross-apply)
+
+- Non-DPU SONE TOR (`else` arm of `sone_register_pltfm_rx_handlers`): single dev
+  `TOR_SONE_KPKT_DEV` ("leaba0_0"), no `ps-svc-inb`, no `ins_app_inb` registration.
+- `CARD_INDEX_BUD_LIGHTNING / OPTIMATOR / BUD_LIGHTNING_X / SARGO` (!vmachine):
+  `TOR_SONE_GR2_KPKT_DEV` ("leaba12_0"). `CARD_INDEX_MUSTANG`:
+  `TOR_SONE_P200_KPKT_DEV` ("leaba11_5"). `CARD_INDEX_OPTIMATOR_X`: AMD + GR2 kpkt
+  pair. `is_sone0_dev` mirrors these per-card name choices.
+- Non-SONE platforms register entirely different notifiers (tahoe/teralynx/triton/
+  mtc/tof/knet/nvidia) from `init_module`.
+
+## Illustrative timeline (2026-06-18 dmesg, Krypton DESCHUTES; values volatile)
+
+`01:12:56` init -> create ps-eobc/ps-inb/ps-svc-inb -> psinb rx on ps-inb &
+ps-svc-inb -> sone pltfm (leaba0_0 not found, pie-eth0 registered) -> notifier
+(eth1 mgmt, pie-eth0 "Cannot register" = benign double-reg) -> sdwrap + swover.
+`~01:15:23` leaba ASIC driver loads -> leaba0_0 registered (success).
+`01:17:24` eth1 re-bound to `ionic` -> ignored. `01:18:57` eth1 -> `veth`.
+(`my_card_index=21271`, ifindex/MAC values are session-specific.)

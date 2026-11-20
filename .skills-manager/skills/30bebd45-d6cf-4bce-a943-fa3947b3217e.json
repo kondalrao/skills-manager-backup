@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "30bebd45-d6cf-4bce-a943-fa3947b3217e",
+  "path": "diagram-maker",
+  "path_key": "diagram-maker",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

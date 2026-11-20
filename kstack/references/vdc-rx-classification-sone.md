@@ -1,0 +1,47 @@
+# FLOW-008: klm_vdc SONE inband RX classification (skb->protocol -> VDC queue ethertype)
+
+- **FLOW**: FLOW-008
+- **protocol**: (infra) VDC queue-ethertype classification on inband RX
+- **platform**: Silicon One (native SONE arm; non-SONE arms noted, not walked)
+- **status**: verified
+- **date**: 2026-07-09
+- **source**: `standalone/platform/storage/sup/kspace/vdc/klm_vdc_char.c`
+  (+ `klm_vdc.c`, `export/isan/klm_vdc_intf.h`). External setter: klm_psdev
+  (`skb_protocol_get_inb`, KSTACK-031). External helpers: klm_lcnd/lcnd_sone
+  (`lcnd_get_outer_eth_hdr`, `lcnd_plat_map_la_event_trap_to_sup_code`, punt hdr).
+
+Downstream of FLOW-007 step 2.5: `ps_sone0_rx_handle_frame` calls
+`skb->protocol = skb_protocol_get_inb(skb, skb->dev)`. `skb_protocol_get_inb` is set
+by klm_vdc to `eth_type_trans_inb`. This flow is what runs inside that call.
+
+## Ordered steps
+1. `skb_protocol_get_inb(skb,dev)` == `eth_type_trans_inb` (set in `vdc_module_init`).
+2. `eth_type_trans_inb` -> `eth_type_trans_with_port_type(skb,dev,PORT_TYPE_INBAND)`.
+3. `si_vdc_eth_type_trans(skb,&protocol)` -> per-`my_card_index` dispatch (KSTACK-035);
+   SONE native card set -> `sone_si_vdc_eth_type_trans`.
+4. `sone_si_vdc_eth_type_trans`: resolve outer eth/slot/card_id (external); byte-swap
+   punt hdr; FPT/BFD/ODIAG short-circuits; TTL workaround (non-G200); compute cos/bpdu;
+   `src_index = punt_hdr->source_sp`; `vdc_table_lookup(PORT_TYPE_INBAND, src_index)`.
+5. hit -> `klm_vdc_char_get_q_eth_type(vdc_id,cos,proto,bpdu)` ->
+   `get_q_mapping` -> `VDC_ETHTYPE_BASE + queue offset` (vdc 1: 0xf102 BPDU /
+   0xf103 Q0 / 0xf104 Q1, KSTACK-014).
+   miss -> force vdc_id=1 for (THE_CHILD_RP_1/GROGU_RP EGRESS_TRAP MTU/TTL @
+   source_sp=0xffff) or per-card RCY source ports; else return 0.
+6. Back in `eth_type_trans_with_port_type`: if VDC returned 0 -> `protocol =
+   eth_type_trans(skb,dev)` (real ethertype); else return the VDC queue ethertype.
+7. `skb->protocol` (now the VDC queue ethertype or real ethertype) flows on via
+   `netif_receive_skb` -> `psinb_rx_handle_frame` -> rni -> lcnd (FLOW-007/FLOW-001).
+
+## Field transformations
+`punt_hdr.source_sp -> src_index -> si_vdc_map_table lookup -> vdc_id`;
+`cos/bpdu/proto -> queue -> skb->protocol = 0xf10x` (or unchanged real ethertype).
+
+## Divergence points (do NOT cross-apply)
+- Platform arm (step 3) is `my_card_index`-dependent (KSTACK-035); non-SONE arms differ.
+- G200/GR2 cos-from-outer-PCP; G200 skips ttl++ workaround; MUSTANG outer cos (CSCwu02678).
+- Empty `si_vdc_map_table` (no in-tree programmer, KSTACK-034) -> step 5 miss ->
+  fallback to real ethertype unless the egress-trap/RCY branches fire (unverified;
+  confirm via getnext-ioctl walk).
+
+## Illustrative (2026-07-09 source read; volatile)
+vdc_id=1 -> BPDU 0xf102, Q0 0xf103, Q1 0xf104. Card-index membership per box; re-derive.

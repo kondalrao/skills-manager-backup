@@ -1,0 +1,34 @@
+# VXLAN decap (RX) — SONE — STUB
+
+Placeholder for the SONE VXLAN decap punt path. NOT yet traced end to end — do not
+reason from this until the steps are filled in from code + a live trace. Created so
+VXLAN `l2ra_vni`/BD bugs are NOT mis-debugged with the Tahoe `lcnd_tah_inband_decap`
+"vlan 0xffff for L3 intf" logic (KSTACK-003).
+
+## FLOW-003: SONE VXLAN decap (RX)
+
+- **protocol**: VXLAN (decap)
+- **platform**: Silicon One
+- **status**: unverified (STUB — anchors only)
+- **date**: 2026-06-11
+
+### Known anchors (in `lcnd_sone_inband_decap`, verify before use)
+
+- VXLAN GID resolve: `lcnd_resolve_vxlan_gid(source_lp)` (also used on the
+  IPsec RX glean path, `references/ipsec.md` FLOW-001 step 6).
+- VXLAN decap branch lives in `lcnd_sone_inband_decap`; MPLS decap is a
+  sibling branch (`lcnd_handle_mpls_decap`).
+- Sup-code gating: `lcnd_check_supcode_for_vxlan_decap` (confirm behavior).
+
+### To capture when traced
+
+- Ordered steps anchored on function/snippet (not absolute lines) with field
+  transformations (outer strip, VNI -> BD, `l2ra_vni`/`l2ra_sw_bd` writes — find
+  the LAST write, METHOD-001).
+- How VNI maps to `lc_vlan`/`sw_bd` vs the glean path.
+- Divergence points (L2 vs L3 VXLAN, egress-trap-SVI).
+
+### Notes
+
+- Do NOT borrow the Tahoe VXLAN/0xffff logic (in `lcnd_tah_inband_decap`) —
+  different platform (KSTACK-003).

@@ -1,0 +1,39 @@
+> Auto-generated replica of `references/sone-encap-tx.md`. Edit the skill source (`~/.agents/skills/kstack/references/sone-encap-tx.md`), not this Confluence page. Changes appear on the next sync run.
+
+# SONE inject / TX (encap) — STUB
+
+The mirror of the RX decap path: kernel -> ASIC inject via `ps-inb`. Recorded as a
+stub from code reads (KSTACK-015); fill in per-inject-type header math when next
+traced live.
+
+## FLOW-002: SONE encap / inject (TX)
+
+- **protocol**: n/a (infra inject path; protocol-specific encap rides on top)
+- **platform**: Silicon One
+- **status**: unverified (call chain verified; header field math TBD)
+- **date**: 2026-06-11
+
+### Call chain (functions in `lcnd_n9k.c` unless noted; grep names to locate)
+
+```
+lcnd_xmit                       [lcnd.c]    (netdev ndo_start_xmit)
+  -> lcnd_plat_encap                        builds l2_xmit_attr_cb_t (l2xa_cb)
+  -> lcnd_encap_fill_plat_hdr   (dispatch)  -> per-platform fill
+  -> lcnd_sone_encap_fill_plat_hdr          SONE inject header
+  -> dev_queue_xmit -> "ps-inb"  (real_intfc module param)
+```
+
+### To capture when traced
+
+- The l2xa_cb fields that drive the header (`l2xa_vni`, phy/port index, flags).
+- SONE inject header variants (DOWN / UP / TIME_EXT for PTP/IPsec) and how the
+  variant is chosen.
+- smod/sport/dmod/dport derivation.
+- Divergence points (flood vs unicast, timestamp inject).
+
+### Notes
+
+- TX control block is `l2_xmit_attr_cb_t` (macro `L2_XMIT_CB`), distinct from the
+  RX `l2_recv_attr_cb_t`.
+- Enable encap trace via `lcnd_pkt_encap_debug` / `pkt_encap_trace` (see KNOWLEDGE
+  `## Switch Commands`).

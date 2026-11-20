@@ -1,0 +1,19 @@
+ifindex / IOD translation (kfib_urib.c)
+
+  lnx_ifindex (RTA_OIF from kernel)
+    |
+    v
+  kfib_lnx_to_csco_ifindex()
+    |
+    v
+  lpss_lookup(kim_nxos_lpss_if_index_handle, key = lnx_ifindex)
+    |        -> NXOS if_index_t     [reads KIM's volatile:kim_nxos_if_handle_db]
+    v
+  im_get_iod_frm_ifindex(ifindex) -> iod (if_ordinal)
+    |
+    v
+  sprintf_if_index(ifname, ifindex)
+    |
+    v
+  urib_add_one_route / urib_delete_one_route
+    (urib_pib_hdl, tid, prefix, mask, next_hop, iod, ...)

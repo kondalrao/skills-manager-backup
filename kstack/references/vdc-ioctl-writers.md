@@ -1,0 +1,178 @@
+# FLOW-009: `klm_vdc` ioctl writer chains (who programs each table, and when)
+
+- **FLOW**: FLOW-009
+- **Protocol**: (cross-protocol infra) `/dev/klm_vdc` control-plane WRITE path
+- **Platform**: platform-common (SONE default); INBAND map programmers are
+  IM/PCM/MCEC/MCM on all N9K/EOR ASICs
+- **status**: verified
+- **date**: 2026-07-09
+- **image (as-of)**: `space_kkomarag_COV_10_7_0_IMG9_0_201`
+
+Companion to **FLOW-008** (the READ/datapath side, `references/vdc-rx-classification-sone.md`).
+This file answers: **who issues each `VDC_IOC_*` write, through which chain, under
+what condition.** Every writer opens `/dev/klm_vdc` (usually via a `libvdcklm.c`
+wrapper) and issues `ioctl(VDC_IOC_*)`, handled by `vdc_chr_ioctl`
+(`klm_vdc_char.c`). Anchor on function names; line numbers below are dated
+as-of hints (drift per rule 7).
+
+> **Method caveat (important, see METHOD-014).** cscope `-3` (callers)
+> **silently under-reported** on this DB — it returned *empty* for the mapping /
+> queue / stats wrappers that in fact have many callers. The caller sets here were
+> re-derived with a **scoped `rg`** over source dirs only (excluding
+> `third-party/` + `bazel-*`, which is what makes root `rg`/`grep` time out). When
+> a writer "has no caller," confirm with scoped `rg` before believing it.
+
+---
+
+## A. INBAND SI/LTL map — `VDC_IOCADD_MAP`/`VDC_IOCDEL_MAP`, `port_type=PORT_TYPE_INBAND`
+
+Wrappers `vdc_add_src_index_mapping` / `vdc_del_src_index_mapping` (key = SONE PI /
+`source_sp`; on INS_EOR `ltl_to_si()` converts LTL→PI first). This is the table the
+SONE RX classifier reads (FLOW-008). **Not legacy — actively programmed:**
+
+- **Interface Manager (module/LC & interface bring-up) — primary programmer:**
+  - `im_evseq_lc_inseor.c` — iterates every module port where
+    `im_cap_is_vdc_si_needed_for_port_type()`, programs `ltl→vdc` (add) / removes on
+    teardown. *Condition: LC/module event-sequence bring-up / removal (INS_EOR).*
+  - `im_module_fsm_ac.c` (module FSM, `DEFAULT_VDC`), `im_vdc_fsm_ac.c`,
+    `im_c3.c`, `im_inseor.c` (sup-fc inband restore, guarded by
+    `vdc_id != 0 && im_is_ltl_programming_needed()`; CSCvj10306/CSCtw52123).
+    *Condition: interface→VDC assignment during create/restore.*
+- **Port-Channel Manager** (`eth_pcm_fu.c`, `eth_pcm_msg_handlers.c`,
+  `eth_pcm_restore_pss_data.c`, `eth_pcm_evs.c`): resolve PC `ltl` via
+  `pixm_lib_ifidx_to_di()` and map `ltl→sysmgr_vdc_get()`. *Condition: PC member
+  add/remove + PSS restore.*
+- **MCEC** (`mcecm_fu.c`, `mcecm_pd_intf.c`): keyed on `es_common_lid`.
+  *Condition: MCEC emulated-switch common-LID create/delete.*
+- **MCM / Metropolis** (`mcm_app.c` `mcm_update_source_index_info_to_vdc`):
+  add/del on `MCM_OPER_FLAG_ADD`. *Condition: MCM source-index add/remove.*
+- Test tool: `klm_vdc_test.c` (not production).
+
+## B. IPS ifindex map — `VDC_IOCADD_MAP`/`VDC_IOCDEL_MAP`, `port_type=PORT_TYPE_IPS`
+
+Wrappers `vdc_add_ifindex_mapping` / `vdc_del_ifindex_mapping`
+(`netcfg_get_kifindex()` → kernel ifindex). Callers are **Interface Manager**,
+alongside the LTL programming in (A): `im_evseq_lc_inseor.c`, `im_module_fsm_ac.c`,
+`im_vdc_fsm_ac.c`, `im_mds.c`. *Condition: same module/interface bring-up &
+teardown — the ifindex-keyed sibling of the INBAND map.*
+
+## C. MGMT IP map — `VDC_IOCADD_MAP`/`VDC_IOCDEL_MAP`, `port_type=PORT_TYPE_MGMT`
+
+Wrappers `vdc_add_ipaddr_mapping` / `vdc_add_ipv6addr_mapping` / del. **Live path is
+IP code** (not ipconf):
+- `ip_ui.c` `ip_address_add` — guarded by `lcache_im_is_mgmtether(iod)`,
+  `vdc = sysmgr_vdc_get()`; matching del on address delete. *Condition: IPv4(/v6)
+  address configured/removed on **mgmt0**.*
+- `ip_init.c` — bulk `vdc_del_ipaddr_mapping(KEY_INDEX_INVALID, vdc_id)` +
+  `vdc_del_ipv6addr_mapping` at IP-server/VDC teardown.
+- **DEAD path:** `ipconf_stub.c` `vdc_add/del_ipaddr_mapping` are inside `#if 0`
+  ("klm_vdc mapping for mgmt0 is moved to IP code") — not compiled.
+- Also reached via `vdc_del_mgmt_vdc` (see D). Test tool: `klm_vdc_test.c`.
+
+## D. MGMT-VDC entry — `VDC_IOC_MGMT_ADD`/`VDC_IOC_MGMT_DEL`
+
+- `mgmt_vdc_upd` (ADD/state): `im_db.c im_mgmt_iod_assign_callback` (initial
+  `MGMT_VDC_ST_DOWN`); `im_mgmt_fsm_ac.c im_mgmt_fsm_change_oper_port_state`
+  (`UP`/`DOWN`). *Condition: mgmt0 created / oper-state change.*
+- `mgmt_vdc_del` (DEL): `im_db.c im_mgmt_iod_release_callback`,
+  `im_vdc_fsm_ac.c im_vdc_mgmt_interface_delete_done` (guarded by
+  `im_is_mgmt_created()`); and `vdc_del_mgmt_vdc` → `vdc_mgr_ungraceful.c` after
+  `MTS_OPC_VDC_OFFLINE`. *Condition: mgmt-interface / VDC deletion or ungraceful
+  offline (also flushes all mgmt IPs for the VDC).*
+
+## E. MGMT multicast — `VDC_IOC_MCAST_ADD`/`VDC_IOC_MCAST_DEL`
+
+Wrappers `klm_vdc_add_mcast_entry` / `klm_vdc_del_mcast_entry`
+(`process_mcast_entry_common`, `vdcid_map = 1<<vdc_id`). Caller = **IP/IGMP local
+group join/leave, mgmt iod only**: `ip_init.c ip_join_group_internal` (add, guarded
+by `ismgmt_iod`), `ip_leave_group_internal` (del), `ip_clear_multicast_addresses`
+(del group 0 = all). *Condition: local multicast join/leave on mgmt0.*
+
+## F. MGMT protocol packets — `VDC_IOC_MGMT_PROTO_PACKETS`
+
+Wrapper `klm_vdc_rx_protocol_packets(proto, vdc, action)`. **Reached only via
+`dlopen`/`dlsym`** (why cscope/static search miss it): `lldp_db.c`
+`lldp_create_rx_fsm` `dlopen("/isan/lib/libvdcklm.so")` →
+`(*fptr)(0x88cc, sysmgr_vdc_get(), 1)` (enable LLDP ethertype `0x88cc`);
+`lldp_destroy_rx_fsm` → action `0` (disable). Guarded by
+`#if defined(DC3)||defined(INS_EOR)` + `lldp_is_mgmt_if()`. *Condition: LLDP RX-FSM
+created/destroyed on the mgmt interface.*
+
+## G. Control-Q remap — `VDC_IOC_CTRL_Q_MAP`
+
+Wrapper `vdc_set_q_mapping(klm_q_type, map_q_index)`. Caller = **PM inband CLI**
+(`pm_ui.c pm_inband_schedule_algo_cmd`): remaps `BPDU_Q`/`Q0`/`Q1`/`ARP_Q` to a
+queue index (reset to default on `no`). *Condition: `platform inband` queue config.*
+
+## H. CPUQ→COSQ map — `VDC_IOC_CPUQ_COSQ_MAP` (CoPP-driven)
+
+The named-wrapper view is misleading. This ioctl is driven by **CoPP**, with each
+caller opening `/dev/klm_vdc` and issuing the ioctl **directly**:
+- **coppmgr** `copp_cfg_fsm_ac.c copp_update_cosq_cpuq()` — the real driver: an
+  `avl_walk` over CoPP policy members; per class-map it reads the `set cos` action
+  value, computes `cpuq = INSIEME_SUP_Q_DYNAMIC_END - cpuq`, programs `cpuq→cosq`.
+  *Condition: CoPP policy apply/commit.*
+- **Per-ASIC aclqos CoPP wrappers** (own open+ioctl): `aclqos_mtc_copp.c`,
+  `aclqos_tah_copp.c`, `aclqos_hea_copp.c`, `aclqos_sug_copp.c`, `aclqos_hom_copp.c`,
+  `aclqos_tr2_hw_intf.c` (+ Fretta copies). *Condition: single-chip ToR CoPP RCPU-Q→COS
+  (`aclqos_is_ns_tor()||_t2_only_tor()||_tomahawk_tor()` && `!vchassis_tor`); on
+  vToR/EOR done in coppmgr / FM instead.*
+- **Name collision / dead lib symbol:** `aclqos_tr2_hw_intf.c` defines its own
+  `static int32 vdc_set_cpuq_cosq_mapping()` that shadows libvdcklm's exported
+  `vdc_set_cpuq_cosq_mapping` (`#if XC||INS_EOR`); the **libvdcklm one has no
+  in-tree caller** (dead). Same ioctl either way.
+
+## I. Enable mgmt broadcast — `VDC_IOC_ENABLE_MGMT_BCAST`
+
+Wrapper `klm_vdc_enable_mgmt_bcast_pkts`. `pnp_net.c` (`pnp_net_init` TRUE /
+`pnp_net_halt` FALSE); `poap_dhcpdiscover.c` (`poap_net_init` 1 / `poap_net_uninit`
+0). *Condition: PnP / POAP net subsystem init & halt (bring DHCP/bcast to pktmgr).*
+
+## J. GDB enable/disable — `VDC_IOC_ENABLE_GDB`/`VDC_IOC_DISABLE_GDB`
+
+Wrapper `klm_vdc_enable_gdb`. Caller `pm_ui.c pm_debug_cmd`. *Condition: PM
+`[no] debug` CLI.*
+
+## K. Set debug — `VDC_IOC_SET_DBG` (test-tool-only)
+
+Wrapper `klm_vdc_set_debug`; sole in-tree caller `klm_vdc_test.c` (the standalone
+test binary). No production caller, no `dlsym`, no direct-ioctl bypass (opcode
+appears only in the `#define`, the driver `case`, and the wrapper). *Condition:
+manual test utility only.*
+
+## L. Clear Q stats — `VDC_IOC_CLEAR_Q_STATS`
+
+Wrapper `vdc_clear_global_inband_q_stats`. Caller `pm_ui.c` (`clear ... counters` /
+`clear-all-counters`). *Condition: operator clear-inband-counters CLI.* (One of the
+writers cscope `-3` missed entirely.)
+
+## M. Control timestamp — `VDC_IOC_CTRL_TIMESTAMP`
+
+Wrapper `klm_vdc_ctrl_timestamp(vdc, flag)`. Caller `pm_ui.c` (`enable-timestamp` /
+`disable-timestamp`, under `#ifndef NUOVA_PLATFORM`). *Condition: PM
+`[no] enable-timestamp` inband CLI.* (See KSTACK-034 note re: whether the kernel
+implements the opcode's `case`.)
+
+## N. Set base diag VLAN — `VDC_IOC_SET_START_DIAG_VLAN` (`GOLD_DEBUG_STATS`)
+
+Wrapper `vdc_set_base_diag_vlan`. Caller `diag_port_lb_diag.c` after
+`MTS_OPC_VLAN_MGR_GOLD_VLAN_CREATED`. *Condition: GOLD online-diagnostics
+port-loopback test setup.*
+
+---
+
+## Writer taxonomy (one-line summary)
+
+- **Auto / lifecycle (datapath-critical):** INBAND SI/LTL + IPS ifindex maps ←
+  **IM / PCM / MCEC / MCM** on interface & module lifecycle (A, B); MGMT
+  entry/IP/mcast ← **IM mgmt-FSM + IP/IGMP** on mgmt0 config/state (C, D, E).
+- **Feature-triggered:** PnP/POAP bcast (I); LLDP proto `0x88cc` via `dlopen` (F).
+- **Operator/CLI:** PM q-remap / clear-stats / timestamp / GDB (G, L, M, J); ACLQOS
+  CoPP `CPUQ_COSQ` (H); GOLD diag vlan (N).
+- **Not live / test-only:** `ipconf_stub` mgmt path (`#if 0`); `VDC_IOC_SET_DBG`
+  (test tool); libvdcklm `vdc_set_cpuq_cosq_mapping` (shadowed by ACLQOS static).
+
+## Cross-refs
+KSTACK-033 (module/tables), KSTACK-034 (ioctl surface + programmers), KSTACK-035 /
+FLOW-008 (the reader), METHOD-014 (cscope `-3` under-report → scoped-`rg`
+cross-check), `architecture/klm-vdc-driver-architecture.md` §6–§7.

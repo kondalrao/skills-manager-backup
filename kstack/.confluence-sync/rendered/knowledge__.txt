@@ -1,0 +1,7 @@
+> Auto-generated index for `knowledge/` in the **kstack** skill. Edit the skill source, not this page.
+
+## Pages
+
+- `knowledge/entries.md`
+- `knowledge/methods.md`
+- `knowledge/switch-commands.md`

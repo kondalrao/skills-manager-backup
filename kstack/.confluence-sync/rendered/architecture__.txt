@@ -1,0 +1,9 @@
+> Auto-generated index for `architecture/` in the **kstack** skill. Edit the skill source, not this page.
+
+## Pages
+
+- `architecture/psinb-driver-architecture.md`
+- `architecture/klm-vdc-driver-architecture.md`
+- `architecture/kim-process-architecture.md`
+- `architecture/kfib-library-architecture.md`
+- `architecture/netbroker-architecture.md`

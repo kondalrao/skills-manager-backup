@@ -1,0 +1,18 @@
+TX datapath (egress: LCND inject -> ASIC)
+
+ klm_lcnd        psdev_start   psdev_munge   dev_queue     parent ASIC
+ (lcnd_*_encap)  _xmit         _pkt          _xmit         netdev
+   |               |             |             |             |
+   | dev_queue_xmit(ps-inb) -> ndo_start_xmit  |             |
+   |-------------->|             |             |             |
+   |               | skb->dev = psd_priv->parent_dev (else drop)
+   |               |[self]       |             |             |
+   |               | if !is_fretta_tor         |             |
+   |               |------------>|             |             |
+   |               |             | HG no-op / RCPU 802.1Q /  |
+   |               |             | EPC hdr rewrite           |
+   |               |             |[self]       |             |
+   |               | dev_queue_xmit(skb)       |             |
+   |               |-------------------------->|             |
+   |               |             |             | qdisc -> wire|
+   |               |             |             |------------>|

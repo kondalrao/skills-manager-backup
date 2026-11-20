@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "dbcb7976-1d46-48ed-84e3-cad3dabac703",
+  "path": "lcnd-debug-driver",
+  "path_key": "lcnd-debug-driver",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

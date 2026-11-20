@@ -1,0 +1,23 @@
+# Catch-all flows (no specific protocol)
+
+End-to-end flows that are not tied to a specific protocol. Protocol-specific
+flows get their own file (e.g. `cdp-ingress.md`) instead.
+
+_None recorded yet._
+
+<!--
+Template:
+
+## FLOW-NNN: <title>
+- **protocol**: n/a (catch-all)
+- **platform**: Silicon One
+- **status**: verified | unverified | superseded
+- **date**: YYYY-MM-DD
+- **steps**:
+  1. <func> (anchor on function/snippet, NOT a line number) -- <field reads/writes>
+  2. <func> -- ...
+- **divergence points**: <flag-gated branches that change the path>
+- **notes**: <past-vs-present deltas, related ids; keep volatile values
+  (line numbers, interface names, per-session hex) out of steps -- put any
+  observed values in a dated "illustrative" note>
+-->

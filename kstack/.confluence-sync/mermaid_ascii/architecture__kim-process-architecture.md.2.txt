@@ -1,0 +1,32 @@
+MTS bind / register / dispatch (kim_mts.c)
+
+kim_mts_bind()
++-------------------------------------------------------------+
+| mts_bind LNODE_SUP, MTS_SAP_KIM_SYSMGR  -> smq             |
+| mts_bind LNODE_SUP, MTS_SAP_KIM         -> kimq            |
+| mts_bind LNODE_SUP, MTS_SAP_DYNAMIC     -> kim_mts_stats_q |
+| for kim_notifs[]: mts_options_set(kimq, opc,               |
+|                     REGISTER | PERSISTENT)                  |
+|   + kim_notifs_mcecm[]   (always)                          |
+|   + kim_notifs_eth_pcm[] (only if is_fretta)               |
++-------------------------------------------------------------+
+        |
+        v
+kim_process_single_my_msg()  [dispatch]
++-------------------------------------------------------------+
+| mts_recv(kimq)                                              |
+|   -> reject?  --yes--> mts_drop                             |
+|   -> sdwrap_process_msg / fsrv_sdb_process_msg  (filters)   |
+|   -> standby?  --yes--> drop (goto done)                    |
+|   -> mpmts_gather   (if multi-part)                         |
+|   -> opcode = mts_opc_get                                   |
+|   -> kne = kim_notifs_get(opcode)                           |
+|   -> kne->mts_msg_handler(&msg, opc_str)                    |
+|        -> if standby_sync_done: kim_msg_relay -> standby    |
+|   -> mts_drop                                               |
++-------------------------------------------------------------+
+
+KIM as sender:
+  kim_send_msg_to_ipfib -> MTS_OPC_KIM_DOWNLOAD_ADJ -> MTS_SAP_REGISTRY
+  vlan-create response (reply to VLAN_MGR_REQ_RSP_VLAN_CREATE)
+  ISSU: KIM_STATEFUL_RSTRT / KIM_L3_STATEFUL_RSTRT -> registry

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "2b33369d-856e-4117-be1c-cba5b36ad670",
+  "path": "wasm-compatibility",
+  "path_key": "wasm-compatibility",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

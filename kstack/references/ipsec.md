@@ -1,0 +1,185 @@
+# IPsec protocol reference (TX/RX shared + RX glean flow)
+
+Shared IPSec command ladders and state-correlation notes in this file apply to
+both TX and RX debugging. Direction-specific datapath sections remain labeled
+explicitly; `FLOW-001` below is RX-only.
+
+End-to-end Silicon One inband RX path for an ESP-encrypted packet that hits an
+L3 glean adjacency (`L3_GLEAN_ADJ`) and is punted to the supervisor. This single
+flow underlies multiple debugging sessions (KSTACK-001, 006-011). Walk it and
+report past-vs-present deltas when a live case matches.
+
+## FLOW-001: SONE IPsec/glean ESP punt decap
+
+- **protocol**: IPsec/ESP over IPv4, glean (`L3_GLEAN_ADJ`; numeric trap code is
+  PID-specific -- resolve from `la_event.h` for the current PID)
+- **platform**: Silicon One
+- **status**: verified (assembled from code reads + crash trace; some downstream
+  behavior is an OPEN defect, see step 7)
+- **date**: 2026-06-10
+- **kernel**: 6.6 (`standalone/third-party/src/kernel/nx-linux/linux-6.6/`)
+
+### Module/function call chain (from crash Call Trace, KSTACK-006)
+
+```
+ASIC RX [klm_sone_krypton]
+  -> ps_sone0_rx_handle_frame [klm_psdev]
+  -> netif_receive_skb
+  -> psinb_rx_handle_frame   [klm_psdev]
+  -> rni_handle_platform     [klm_rni_lcnd]
+  -> handle_platform         [klm_lcnd]
+  -> lcnd_plat_decap         [klm_lcnd]
+  -> lcnd_sone_inband_decap  [klm_lcnd]
+  -> lcnd_sone_process_ipsec [klm_lcnd]   (inlines lcnd_sone_get_netdev)
+```
+
+### Ordered steps (field reads/writes), all in `lcnd_n9k.c`
+
+1. **`lcnd_sone_inband_decap`** parses the SONE punt header: `relay_id`,
+   `source_sp`, `source_lp`, `code` (`L3_GLEAN_ADJ`), etc. Seeds
+   `vlan = outer_vlan = pkt_hdr.relay_id` and later
+   `l2ra_cb->l2ra_vni = vlan`. (KSTACK-001)
+2. **`lcnd_lookup_dev`** tries `(svp, pi)` -> ifindex; for the glean/ESP case it
+   fails (`Failed to lookup ifindex ...`), so the path falls into IPsec handling.
+3. **`lcnd_sone_process_ipsec`**: `is_sec_sys_gid(source_sp)` true ->
+   `skb_pull(skb, 8)` removes 8 junk bytes; then calls `lcnd_sone_get_netdev`.
+   `skb->mac_header` is now stale relative to `skb->data`. (KSTACK-011)
+4. **`lcnd_sone_get_netdev`** (static, inlined):
+   - `skb_reset_mac_header(skb)` re-anchors MAC header to `skb->data` (required
+     for `eth_hdr()`, METHOD-006).
+   - VLAN strip: reads payload ethertype `eth_hdr(skb)->h_proto`; trace prints
+     `proto: 0x81` (== `htons(ETH_P_8021Q)`, KSTACK-009). Original
+     `skb_vlan_pop()` no-ops here (KSTACK-007); fixed to a manual payload strip.
+   - `lcnd_skb_parse` -> `dpi.eth_proto` (now `0x800` after strip), `v4_saddr`.
+   - Glean netdev lookup: `lcnd = __ip_dev_find(net, dpi.v4_saddr, false)` then
+     `lcnd_get_netdev_priv(lcnd)`. (Was a NULL deref, KSTACK-006; fixed.)
+   - Sets `is_drop` / `*plcnd` / `*plcdev`.
+5. **Back in `lcnd_sone_process_ipsec`** ("Got an ipsec decapped packet. Removing
+   outer IP header."): assumes `Eth|OuterIP(20)|InnerIP`, does
+   `memcpy(skb->data+sizeof(iphdr), skb->data, ETH_HLEN); skb_pull(skb, sizeof(iphdr))`.
+   `skb->protocol` is set to the default VDC proto at the 8-byte pull, before this
+   slide. Two distinct failures:
+   - ESP (outer IP proto `0x32`): bytes after outer IP are ESP, so the result is
+     malformed `Eth(ethertype 0x0800)|ESP`. (KSTACK-010, OPEN)
+   - LIF-hit arm (`lcnd_lif_htab_get(source_lp)` success): `lcnd_sone_get_netdev`
+     is not called, so step 4's VLAN strip does not run. A customer `Eth|802.1Q|OuterIP`
+     frame keeps `0x8100` at offset 12 and places the outer IPv4 destination's
+     first two octets in the TCI slot. The later `ET_VLAN` reader
+     (`ntohs(h_vlan_TCI) & 0xfff`) reports that value, then the dot1q `memmove`
+     leaves the destination's last two octets as the ethertype. (KSTACK-059)
+6. **Back in `lcnd_sone_inband_decap`**: for non-egress-trap-SVI, the
+   `if(!is_egress_trap_svi)` write `l2ra_cb->l2ra_vni = lcdev->lc_if_info.lc_vlan`
+   overwrites the `relay_id`-seeded value (KSTACK-001/002). Then
+   `lcnd_resolve_vxlan_gid(source_lp)`. (Illustrative 2026-06-10: a loopback showed
+   `l2ra_vni 65535`, a tunnel showed `l2ra_vni 0` -- per-session values.)
+7. **Downstream**: inner parse fails -> "Got an unsupported protocol 0xf104"
+   (also amplified by the tautological `||` unsupported-proto check, KSTACK-010) ->
+   `lcnd_flo_mgr` / `lcnd_insert_metadata_hdroom` operate on the malformed buffer.
+
+### Divergence points / branches
+
+- `is_egress_trap_svi` (default false): when true, skips the `l2ra_vni <- lc_vlan`
+  overwrite (KSTACK-001).
+- `is_sec_sys_gid(source_sp)`: selects the IPsec/glean path with the 8-byte pull
+  (KSTACK-011).
+- Outer IP `protocol`: `0x32` (ESP) vs a real inner IP determines whether step 5's
+  strip is valid (KSTACK-010).
+- VLAN present vs absent in payload (step 4 strip). That strip runs only on the
+  glean/`lcnd_sone_get_netdev` arm. The LIF-hit arm skips it (KSTACK-059).
+
+### Known issues on this flow
+
+- KSTACK-006 -- NULL `lcnd` deref in glean netdev lookup. **Fixed.**
+- KSTACK-007 -- `skb_vlan_pop` no-op; VLAN tag not stripped. **Fixed** (manual strip).
+- KSTACK-010 -- outer-IP strip malforms still-ESP packets; ethertype not updated;
+  tautological unsupported-proto check. **OPEN** (fix direction undecided).
+- KSTACK-059 -- LIF-hit arm does not strip a customer 802.1Q tag before the
+  14-byte outer-IP slide; the dot1q reader then reports the outer IPv4
+  destination prefix as the VLAN.
+
+### Notes / reuse
+
+- Line numbers drift across the fixes above; anchor on code snippets and trace
+  prefixes (`funcname:NNN`), not absolute lines.
+- When a new ESP/glean case appears, diff its byte dumps and `l2ra_vni`/`lc_vlan`
+  against this flow; the delta is usually the bug.
+
+## Shared Switch RCA command ladder
+
+Use this verified ladder before concluding an IPSec RCA from TX or RX packet symptoms.
+The SUP commands identify the control-plane object; the S1HAL commands verify
+what reached hardware. Prefer Type 2 `slot <slot> quoted "<module command>" |
+no-more` for module data.
+
+### SUP control-plane checks
+
+1. `show ip interface brief` -- confirms loopback/tunnel/SVI/interface IPs and
+   admin/protocol state.
+2. `show crypto ipsec internal endpoints` -- maps Tunnel interface to source,
+   destination, endpoint handle, forward VRF, state, and interface status.
+3. `show crypto ipsec internal sa-db` -- maps endpoint handle/source/destination
+   to ingress and egress SPIs.
+4. `show tunnel internal info global  detail` -- confirms tunnel manager global
+   state, LC push/session state, queues, and allocated tunnel interface IDs.
+5. `show tunnel internal database reachability` -- maps destination reachability
+   back to Tunnel interface.
+6. `show tunnel internal database primary | no-more` -- maps Tunnel interface to
+   if-index, IOD, type `IPSEC/IP`, source loopback, destination, PPF nodes, and
+   tunnel statistics.
+
+### Module/S1HAL checks
+
+Run these through the preferred Type 2 form, for example:
+
+```bash
+slot 1 quoted "show hardware internal s1hal ipsec tunnels all" | no-more
+```
+
+1. `show hardware internal s1hal ipsec global` -- feature status, DB status,
+   security-engine allocation policy, next security-port index.
+2. `show hardware internal s1hal ipsec sdk info` -- SDK objects: security system
+   ports, tunnel GID, source/destination, ingress/egress SPIs, SAs, and sessions.
+   This output can include key material; redact before saving.
+3. `show hardware internal s1hal ipsec sec-engines` -- security engine inventory,
+   per-engine ingress/egress SA usage, VRF-to-VLAN mapping, L3AC/NH mapping.
+4. `show hardware internal s1hal ipsec tunnels all` -- all programmed S1HAL
+   tunnels, including tunnel ID, VRF, source/destination, SA counts, state, SPIs,
+   security engine indexes, and underlay nexthop GID.
+5. `show hardware internal s1hal ipsec tunnels tunnel-id <id>` -- focused view
+   for one tunnel from the `all` output.
+6. `show hardware internal s1hal ipsec counter tunnels all` -- all tunnel
+   encryption/decryption/error counters.
+7. `show hardware internal s1hal ipsec counter tunnels tunnel-id <id>` --
+   focused counter view for one tunnel.
+8. `show hardware internal s1hal ipsec counter sec-engines all` -- per-security
+   engine counters keyed by engine index, slice/IFG/engine tuple, and system-port
+   GID. Use this with `sec-engines` placement and tunnel counters to distinguish
+   tunnel-specific packet/error counters from aggregate security-engine activity.
+
+### Correlation keys
+
+- Tunnel interface: the SUP tunnel interface name identifies the logical tunnel.
+- Endpoint handle / if-index: SUP endpoint and tunnel DB share the same if-handle.
+- Source/destination: SUP endpoint/SA DB and S1HAL tunnel/SDK should match.
+- SPIs: SUP `sa-db` ingress/egress SPIs should match S1HAL SDK/tunnel/counter
+  SPIs.
+- Tunnel ID/GID: the S1HAL tunnel ID maps to a tunnel GID; both come from S1HAL.
+- Security engines: S1HAL tunnel/session/sec-engine outputs should agree on
+  ingress and egress engine indexes.
+- Security-engine counters: `counter sec-engines all` should be interpreted with
+  `sec-engines` placement; activity on an engine without matching tunnel-counter
+  movement may reflect other IPSec use or stale/background activity.
+- Counters: egress encrypted/decrypted/error counters identify datapath direction
+  and error class; interpret only with matching traffic and logs.
+
+### Verified example on `des1infra`
+
+On 2026-06-17, the ladder connected Tunnel501 source `50.50.1.1` to destination
+`50.50.1.6`, if-handle `0x180101f5`, ingress SPI `0xb980a1be`, egress SPI
+`0x93067ef1`, S1HAL tunnel ID `4356` / GID `0x1104`, ingress security engine 4,
+egress security engine 5, and underlay nexthop GID `0x10`. S1HAL counters showed
+egress encrypted packets and ingress authentication-error packets; that is a
+direction/error-class signal, not a standalone RCA.
+The security-engine counter command was also verified: it displayed all eight
+security engines with input/output packet and byte counters plus authentication
+only, dummy, and offset-error counters.

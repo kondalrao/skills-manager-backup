@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "5900ee89-835b-49d8-b5af-02d303a5b7d7",
+  "path": "kstack",
+  "path_key": "kstack",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

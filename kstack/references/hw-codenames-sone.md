@@ -1,0 +1,98 @@
+# FLOW-006 (hardware identity): Silicon One card identity -- codename / model / ASIC
+
+**Cisco Highly Confidential.** Source of truth for codenames is the internal
+Confluence page "Hardware codenames"
+(https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/561414869/Hardware+codenames).
+Do NOT copy this outside Cisco. This file caches only the KSTACK-relevant
+**Silicon One (SONE)** subset for offline reasoning; the Confluence page is
+authoritative and updated as new cards ship -- re-fetch it when a switch's
+model/codename is not listed here.
+
+**Full-page local cache:** `references/hw-codenames-confluence-cache.md` holds a
+verbatim snapshot of the entire Confluence page (all families + ASIC glossary) as a
+fallback when live access is lost. **Refresh it on every successful fetch** (bump
+`page_version` / `cached_at`); if the live page is unreachable, use the cache and
+tell the user which `page_version`/`cached_at` you are on. See METHOD-016
+cache-refresh protocol.
+
+Purpose: given a live switch's model (PID) / chassis string / codename, map it to
+its **ASIC family** and confirm whether it is a Silicon One card (the KSTACK
+default platform, `lcnd_sone_*`). Pairs with:
+- **METHOD-016** -- how to grab the identity from a live switch.
+- **KSTACK-028** -- `SW_CARD_ID_IS_WITH_SONE_FAMILY_ASIC(sw_card_id)` /
+  `SW_CARD_ID_IS_TOR(sw_card_id)` macros (`platform_cmn_intf.h`) that encode this
+  same membership in code.
+- **KSTACK-023** -- where `SW_CARD_ID_*` enum names live
+  (`converged/global/constants/export/isan/sw_card_id.h`).
+- **KSTACK-005** -- Silicon One is the KSTACK default platform.
+
+> VOLATILE: model PIDs, codenames and the membership list drift as new cards ship.
+> Anchor reasoning on the **ASIC family** and the `SW_CARD_ID_IS_WITH_SONE_FAMILY_ASIC`
+> macro, not on a snapshot of this table. Re-fetch Confluence + re-read the macro
+> when in doubt.
+
+## Grab identity from switch details (summary; full ladder in METHOD-016)
+
+When several pulls are needed at once (multi-switch, multi-slot, or identity +
+hash-tables + traces together), fan out **parallel non-readonly** subagents, each
+driven by a `handoff` dispatch-mode prompt (read-only scope, own creds, fresh
+`mktemp` known_hosts, return raw output only). The primary re-verifies + synthesizes
+(SKILL rule 12, METHOD-014, METHOD-016 step 0).
+
+Read-only, non-disruptive:
+- `show module` -> per-slot Model (PID) + card type.
+- `show version` -> chassis / cpu / image.
+- `show inventory` -> PID + serial per module/chassis.
+- `show sprom module <mod> <idx> | include 'Mfg Bits'` -> ASIC variant bits (e.g.
+  Eastlake E1 vs E2: `>4096` => E2).
+- `show hardware internal` (platform-specific) -> ASIC instances.
+
+Then map the PID/codename below -> ASIC family; if it is a SONE family entry, the
+running datapath is the Silicon One path (`lcnd_sone_inband_decap` /
+`lcnd_sone_encap_fill_plat_hdr`) and `SW_CARD_ID_IS_WITH_SONE_FAMILY_ASIC` is true
+for that `sw_card_id`.
+
+## SONE-family subset (codename -> model PID(s) -> ASIC family)
+
+| Codename (marketing / XR) | Model (PID) | ASIC (family) | Type | SW_CARD_ID hint |
+|---------------------------|-------------|---------------|------|-----------------|
+| Crocodile / Rochefort | N9K-C9232E-B1 | Graphene (G100) | ToR 1RU 32x800G | `SW_CARD_ID_CROCODILE` |
+| Lakefront | N9336C-SE1 (new) / N9K-C9336C-K1 (old) | Krypton (E100) Mono | ToR 36C MacSec | `SW_CARD_ID_LAKEFRONT` |
+| Allagash | N9396Y12C-SE1 (new) / N9K-C93360YC-K1 (old) | Krypton (E100) | ToR 2RU 96Y+12C | `SW_CARD_ID_ALLAGASH` |
+| SpaceDust | N9396T12C-SE1 (new) / N9K-C93216TC-K1 (old) | Krypton (E100) Mono | ToR 2RU 96x10G-T+12C | `SW_CARD_ID_SPACEDUST` |
+| Eastlake | N9348Y12C-SE1 (new) / N9K-C93280YLC-K1 (old) | Krypton Lite (E104) | ToR 48Y+12C | `SW_CARD_ID_EASTLAKE` |
+| Deschutes | N9348Y2C6D-SE1U | Krypton (E100) | SmartTOR 1RU +Giglio DPUs | `SW_CARD_ID_DESCHUTES` |
+| Dansberg (fmr Dixie) | N9324C-SE1U | Krypton (E100) Mono | SmartTOR +Elba DPUs | `SW_CARD_ID_DANSBERG` |
+| Terrapin | TBD | Argon | ToR 48x1G/100M+4x10/25G+2x100G | `SW_CARD_ID_TERRAPIN` |
+| Bud Lightning / Lightning | N9364E-SG2-Q | Graphene2 (G200) | ToR 2RU 64x800G QSFP-DD | `SW_CARD_ID_BUD_LIGHTNING` |
+| Optimator / Superbolt | N9364E-SG2-O | Graphene2 (G200) | ToR 2RU 64x OSFP800 | `SW_CARD_ID_OPTIMATOR` |
+| Bud Lightning X / LightningX | N9364E-SG2X-Q | Graphene G200_X | ToR 2RU 64x QSFP-DD800 | `SW_CARD_ID_BUD_LIGHTNING_X` |
+| OptimatorX / SuperboltX | N9364E-SG2X-O | Graphene G200_X | ToR 2RU 64x OSFP800 | `SW_CARD_ID_OPTIMATOR_X` |
+| Mustang | N9364E-SP2R-O | Palladium2 (E200) | ToR 3RU 64x OSFP800 | (SONE PL2 family) |
+| Titan | N9364E-SP2R-Q | Palladium2 (E200) | ToR 3RU 64x QSFP-DD800 | (SONE PL2 family) |
+| Razor Crest | N9K-X9836E-SP2R-O | Palladium2 (E200) | LC 36x800G OSFP-DD800 | (SONE PL2 family) |
+| Cara Dune 8/4 / Lodestar | N9K-C9808-FM-A / N9K-C9804-FM-A | Gibraltar (Q200) | Fabric Module (N9800) | `SW_CARD_ID_IS_MANDO_FM` |
+| Vanguard (Moff Gideon) | N9K-X9836DM-A | Gibraltar (Q200) | LC 36D MacSec | `SW_CARD_ID_IS_MANDO_LC` |
+| Lancer (Axe Woves) | (TBD) | Gibraltar (Q200) | LC 36D no MacSec | `SW_CARD_ID_IS_MANDO_LC` |
+| Dauntless (Toro Calican) | N9K-X98900CD-A | Gibraltar (Q200) | LC 34C+14D 16p MacSec | `SW_CARD_ID_IS_MANDO_LC` |
+| Mando 8/4 (Spitfire) | N9K-C9808 / N9K-C9804 | (N9800 chassis) | 8/4-slot chassis | (chassis) |
+| The Child / RP1 | N9K-C9800-SUP-A | (N9800 sup) | Supervisor gen1 | `SW_CARD_ID_THE_CHILD_RP_1` |
+| Grogu / Hudson | N9K-C9800-SUP-B | (N9800 sup) | Supervisor gen2 | `SW_CARD_ID_GROGU_RP` |
+| Sash Ketter | TBD | Palladium | LC 36x800G (modular) | (SONE family) |
+| Paz Vizsla8 | N9K-C9808-FM-B | Iron (F100) | FM 8-slot (modular) | (SONE family) |
+| Killians | TBD | Krypton (E100) | (TBD) | (SONE family) |
+| Seafox-X / Sabre / Seafox-O | (TBD) | Graphene (G300) | ToR (LC/AC) | (SONE family, future) |
+
+Notes:
+- Additional in-macro `SW_CARD_ID_*` names not yet clearly PID-mapped on the page
+  (e.g. `WBOX_CHURCHILL`, `TP_WBOX_THUNDER`, `SARGO`) are still SONE family per the
+  macro -- trust the macro, add the row here once the PID/codename is confirmed.
+- ASIC-family umbrella macros in `platform_cmn_intf.h`:
+  `SW_CARD_ID_IS_WITH_SONE_FAMILY_ASIC` (all above), `..._SONE_GR2_FAMILY_ASIC`
+  (Graphene2/G200), `..._SONE_PL2_FAMILY_ASIC` (Palladium2/E200),
+  `..._SONE_FAMILY_ASIC_L2` (SONE cards with L2 support -- a subset).
+- The full non-SONE tables (Tahoe/Rocky/Chopaka/Appalachia/Fretta/Innovium/
+  Nvidia/N3K/N2K + ASIC->BCM codename glossary) live on the Confluence page and in
+  the full-page cache `references/hw-codenames-confluence-cache.md`; consult either
+  when a card is not Silicon One (then use the matching non-SONE
+  `lcnd_<plat>_inband_decap`, KSTACK-003 / Domain Map dispatch table).

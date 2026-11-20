@@ -1,0 +1,25 @@
+KIM in-core state and where it is pushed
+
+KIM in-core state (kim.h / kim_db.c)
++-------------------------------------------------------------+
+| g_kim_cfg                                                   |
+|   |                                                         |
+|   +--> kim_intf_tree_root (AVL)                             |
+|   |      node: lc_if_info_avl_t   key: ifindex             |
+|   |                                                         |
+|   +--> kim_vlan_tree_root (AVL)                             |
+|          node: vlan_info_avl_t    key: vlan_id             |
+|                                                             |
+| ns_name_hash  (namespace hash)                              |
+| LPSS: Linux <-> NX ifindex map  (kim_lpss.c)                |
++-------------------------------------------------------------+
+     |                        |                     |
+     | SIOCDEVADDLC/          | SIOCSIFMTU/         | persist
+     |   MODLC/DELLC          |   SIOCSIFFLAGS      v
+     v                        v            +-------------------------+
++---------------------------------+        | 7 PSS records:          |
+| Kernel / LCND (OUT OF SCOPE)    |        | intf / vrf / vlan /     |
+|   lc_if_info in LCND            |        | feature / global /      |
+|   Linux netdevices + pseudo-nd |        | inband / ...            |
+|   (see FLOW-005)               |        +-------------------------+
++---------------------------------+

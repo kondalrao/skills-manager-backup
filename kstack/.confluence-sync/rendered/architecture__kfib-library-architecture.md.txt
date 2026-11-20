@@ -1,0 +1,577 @@
+> Auto-generated replica of `architecture/kfib-library-architecture.md`. Edit the skill source (`~/.agents/skills/kstack/architecture/kfib-library-architecture.md`), not this Confluence page. Changes appear on the next sync run.
+
+# KvFIB (Kernel FIB) Library Architecture
+
+Userspace **supervisor daemon** that keeps the NX-OS unicast RIB (URIB) in sync
+with routes that appear in the **Linux kernel** routing tables. This document
+describes the **KFIB process** (`standalone/infra/kstack/kfib/`, a.k.a. KVFIB /
+libkvfib): what it does, its threads and data structures, the **netlink → URIB**
+route-sync call sequence, the **kernel programming sequences** it performs, who
+drives its per-VRF socket lifecycle, and the significant amount of code that is
+currently compiled out (`#if 0`).
+
+> **Scope & boundary.** Everything under `standalone/infra/kstack/kfib/` is
+> **in scope**. KFIB is a *route-sync translator*: it reads kernel route
+> notifications over **NETLINK_ROUTE** (one socket per VRF network namespace) and
+> **programs the NX-OS URIB** via the `urib_*` client API. The URIB process, the
+> LPSS interface-index databases (owned by **KIM**), the interface manager
+> (**IM**), and **L3VM** (VRF ↔ table-id) are **out of scope** here and named as
+> boundaries in §9. KFIB does **not** touch the LCND datapath, does not decap/
+> encap, and does not own a kernel module.
+>
+> **Volatile vs stable.** Opcode *numbers* (`MTS_OPC_INTERNAL_KFIB`), the
+> `MTS_SAP_KFIB=234` SAP, hardcoded fallbacks (e.g. the `0x1a101400` ifindex),
+> UUIDs, and line numbers drift across releases. Anchor on **function names**,
+> **struct-field names**, **MTS opcode symbols** (`MTS_OPC_*`), the `urib_*` /
+> `lpss_*` / `im_*` / `l3vm_*` API names, netlink group constants
+> (`RTMGRP_*` / `RTM_*` / `RTA_*`), and trace-string literals. Source read
+> 2026-07-11, image `space_kkomarag_COV_10_7_0_IMG9_0_201`.
+
+---
+
+## 1. Purpose
+
+KFIB answers one question continuously: **"which routes did the Linux kernel
+learn (in each VRF), and how do I mirror them into the NX-OS URIB?"**
+
+- It opens a **NETLINK_ROUTE** socket per VRF network namespace, subscribed to
+  the `RTMGRP_LINK | RTMGRP_IPV4_ROUTE | RTMGRP_IPV4_IFADDR` multicast groups, and
+  reads `RTM_NEWROUTE` / `RTM_DELROUTE` events.
+- For each accepted route it **translates the Linux ifindex → NX-OS ifindex → IOD**
+  and calls the **URIB client API** (`urib_add_one_route` / `urib_delete_one_route`)
+  to add/withdraw the route in the NX-OS RIB.
+- It learns about **VRFs** from **KIM**: an `MTS_OPC_KIM_NS_OPERATION` notification
+  (create/delete) makes KFIB add/remove the netlink socket for that namespace.
+- It resolves the **VRF → NX-OS table-id** through **L3VM**.
+
+So KFIB is the **kernel-to-URIB route importer**: kernel route events in, URIB
+route programming out. It is the counterpart to a routing daemon that would push
+NX-OS routes into the kernel — but note (§8) that the **reverse direction and the
+URIB-notification direction are compiled out** in the current tree, so the live
+behavior is strictly *kernel → URIB*.
+
+> **Naming caution.** Several in-tree headers/comments call this the "Kernel
+> Interface Manager" (`kfib_mts.c`, `kfib_sysmgr.h`) — that is copy-paste from
+> KIM. This process is the **Kernel FIB**. Likewise `kfib.cmd` help strings
+> mention VXLAN/NVGRE/VNI/multicast; there are **no handlers** for any of that —
+> dead boilerplate (§8, ADR-005).
+
+---
+
+## 2. Module identity & build
+
+| Item | Value |
+|------|-------|
+| Daemon | `kfib.bin` (userspace, run under **sysmgr**; `/isan/bin/kfib`) |
+| Show/CLI lib | `libkfibcli.so` (from `kfib.cli`, backs `show kfib …`) |
+| sysmgr config | `kfib.conf` (service definition, HA policy, rlimits) |
+| Parser tree | `kfib.par` (shell `parser_tree`) |
+| Service identity | `SRVUUID_KFIB` / `SRVNAME_KFIB` / `SRVDESC_KFIB` |
+| MTS SAPs | `MTS_SAP_KFIB = 234` (data), `MTS_SAP_KFIB_SYSMGR` (sysmgr) |
+| Scope | **infra** (`standalone/infra/kstack/kfib/`) |
+
+**Object inventory** (translation unit → responsibility):
+
+| Object | Responsibility |
+|--------|----------------|
+| `kfib.o` (`kfib.c`) | `main()`, TSP init, thread spawn (`kfib_thread_init`), sup-state loop |
+| `kfib_mts.o` (`kfib_mts.c`) | MTS bind/register (2 SAPs), `kfib_notifs[]` table, heart/my receive loops, KIM-ns handler |
+| `kfib_netlink.o` (`kfib_netlink.c`) | NETLINK_ROUTE socket create + per-netns mgmt, `select()` RX loop, rtnetlink parse, route-change → URIB |
+| `kfib_urib.o` (`kfib_urib.c`) | URIB client register/deregister, `kfib_urib_add/del_one_route`, LPSS ifindex translation |
+| `kfib_sysmgr.o` (`kfib_sysmgr.c`) | sysmgr handshake, heartbeat active-timer, supstate helpers |
+| `kfib_debug.o` (`kfib_debug.c`) | sdwrap debug/event-history init (`kfib_sdwrap_init`) |
+| `kfib_msgs.o` (`kfib_msgs.c`) | debug-element descriptor + event-history sizing tables |
+| `kfib_show.o` (`libcli/kfib_show.c`) | `show kfib internal event-history …` VSH handlers |
+
+**Build (`module.mk`, gmake):** links `kfib.bin` against `liburib`, `liblpss`,
+`libsdb`, `libacfg`, `libsysmgr`, `libsdwrap`, `libutils`, `libevm`,
+`libconfcheck`, `libfm`, `libbmp`, and the default RSW libs; `libkfibcli.so`
+links `libmts` + `libvsh`. `EXTRA_CPPFLAGS` set `-DTARGET_NXOS=1`,
+`-D__XOS_LINUX__`, `-D__DCOS__=1`.
+
+**sysmgr / HA (`kfib.conf`):** `run = conditional`; `mts = aware`;
+`eth_infra = yes`; **dependency scope `control`** on `SRVNAME_KIM`,
+`SRVNAME_URIB`, `SRVNAME_L3VM` (KFIB starts after those); single-sup HA
+`restart = stateless with default_config` (minlife 10 s, maxretry 5); dual-sup
+`standby_mode = sync`, `global_sync = no`, `restart = stateful` → `switchover`;
+`vdc_config srv_type = local`.
+
+---
+
+## 3. Process lifecycle & threading
+
+_ASCII rendering (source diagram was mermaid):_
+
+```
+Process lifecycle & threading (kfib.c)
+
+  main()
+    |
+    v
+  kfib_init_tsp  (TSP proc lock, SRVUUID_KFIB)
+    |
+    v
+  kfib_mts_bind  (smq = MTS_SAP_KFIB_SYSMGR, kfibq = MTS_SAP_KFIB)
+    |            + register kfib_notifs[]  (only KIM_NS_OPERATION live)
+    v
+  kfib_init_sysmgr(smq)  (sysmgr_handshake -> role; start heartbeat timer)
+    |
+    v
+  kfib_sdwrap_init  (debug / event-history)
+    |
+    v
+  == my_sup_state? ==========================================
+    |                                    |
+    | ACTIVE / COLD_STANDBY              | STANDBY
+    v                                    v
+  kfib_thread_init()                   wait for ACTIVE -> goto do_loop
+  +---------------------------------------------+
+  | pthread kfib_sysmgr_thread                  |
+  |   -> kfib_process_heart_msg (smq/sysmgr)    |
+  | pthread kfib_mts_thread                     |
+  |   -> kfib_process_my_msg (kfibq/notif)      |
+  | kfib_nl_init():                             |
+  |   pthread kfib_nl_thread                    |
+  |     -> kfib_nl_kernel_read (netlink RX)     |
+  |   kfib_init_urib()                          |
+  |     -> urib_api_init + urib_register        |
+  |        + kfib_kim_lpss_init                 |
+  | (+ active-timer thread: heartbeat)          |
+  +---------------------------------------------+
+    |
+    v
+  kfib_join_thread()  (tsp_pthread_join)
+```
+
+**Active supervisor** runs **four threads**:
+
+1. `kfib_process_heart_msg` (`kfib_sysmgr_thread`) — services **`smq`**
+   (`MTS_SAP_KFIB_SYSMGR`): punches `sysmgr_heartbeat(FALSE)` on a ~half-`KFIB_HEARTBEAT_INTERVAL`
+   cadence, then `tsp_mts_recv` + `sysmgr_dispatch` (drops `MTS_OPC_VSH_ACFG_GEN`).
+   Heartbeat discipline exists because *"kfib gets killed by sysmgr before 3
+   timeout of 8 seconds"* (comment in `kfib_process_single_heart_msg`).
+2. `kfib_process_my_msg` (`kfib_mts_thread`) — services **`kfibq`**
+   (`MTS_SAP_KFIB`): lets `sdwrap_process_msg` claim sdwrap opcodes, logs RX to
+   sdwrap history, then dispatches via `kfib_notifs_get(opcode)` → handler.
+3. `kfib_nl_kernel_read` (`kfib_nl_thread`, spawned inside `kfib_nl_init`) — the
+   netlink RX engine (§5).
+4. The **active-timer** thread created by `kfib_timer_init` for the heartbeat
+   callback `kfib_process_heartbeat_timer`.
+
+**Standby / cold-standby**: `kfib_thread_init` is still called; the stateful
+standby-sync path (`kfib_standby_loop`, `kfib_send_lconf`/`kfib_recv_lconf`,
+`MTS_OPC_INTERNAL_KFIB[_PSS]`) is entirely under `#if DO_IT_LATER` / `#ifdef
+DO_IT_LATER` and therefore **not built** (§8, ADR-004).
+
+---
+
+## 4. Data structures (in-core)
+
+KFIB is nearly stateless — it holds no route table of its own; it forwards each
+event to URIB. What it does keep:
+
+| Structure | Where | Purpose |
+|-----------|-------|---------|
+| `nl_sock_list` (`LIST_HEAD` of `nl_sock_info_t`) | `kfib_netlink.c` | One entry per VRF netns: `{ nl_sock, ns_name, table_id, ns_fd, list_entry }`. The default VRF is inserted at init; others come/go on KIM ns events. |
+| `fds` / `max_fd` / `max_nl_socks` | `kfib_netlink.c` | `fd_set` and bookkeeping for the `select()` RX loop. |
+| `default_ns_fd` | `kfib_netlink.c` | fd of `/proc/self/ns/net`, used to `setns()` back to the default namespace after entering a VRF netns. |
+| `urib_pib_hdl` (`urib_pibtype *`) | `kfib_urib.c` | URIB client handle from `urib_register`; also used to *filter out KFIB's own* route notifications (`msg->pib == urib_pib_hdl`). |
+| `kim_lnx_lpss_if_index_handle`, `kim_nxos_lpss_if_index_handle` | `kfib_urib.c` | LPSS read handles opened on KIM's `volatile:kim_lnx_if_handle_db` / `kim_nxos_if_handle_db`. |
+| `smq`, `kfibq` (`mts_q_handle_t`) | `kfib_mts.c` | The two MTS receive queues. |
+| `my_sup_state` (`sysmgr_supstate_t`) | `kfib.c` | Active/standby role. |
+
+Memory is tracked via `mtrack` (`KFIB_MALLOC`/`KFIB_FREE`, types
+`KFIB_MEM_nl_sock_info_t`, `KFIB_MEM_lc_if_info_avl_t`). Debug/event-history has
+8 elements (`Messages/PSS_1/Events/Error/CLI/MTS/Packet/PSS`) each sized
+`…_MEDIUM` (`kfib_msgs.c`, `kfib_cmd.h`).
+
+---
+
+## 5. Kernel → URIB route-sync datapath (the live flow)
+
+_ASCII rendering (source diagram was mermaid):_
+
+```
+Kernel -> URIB route-sync datapath
+
+  Linux kernel FIB (per-VRF netns)
+    |  NETLINK_ROUTE multicast: RTM_NEWROUTE / RTM_DELROUTE
+    v
+  nl_sock (one per netns, in nl_sock_list)
+    |
+    v
+  kfib_wait_for_ip_input()   select() over all nl_sock fds
+    |
+    v
+  kfib_nl_kernel_read()      recvmsg + NLMSG_OK / NLMSG_NEXT iterate
+    |
+    v
+  kfib_nl_info_fetch()       drop if snl.nl_pid != 0 (non-kernel);
+    |                        switch(nlmsg_type)
+    v
+  kfib_nl_route_change()     (RTM_NEWROUTE / RTM_DELROUTE)
+    |
+    v
+  == filters ==============================================================
+    |                                          |
+    | drop                                     | accept
+    v                                          v
+  ignore:                                  kfib_nl_parse_rtattr()
+   non-UNICAST, RTM_F_CLONED,               extract RTA_DST / GATEWAY /
+   RTPROT_REDIRECT,                         OIF / PREFSRC / PRIORITY
+   RTPROT_BIRD (urib-injected),                |
+   src_len != 0,                               v
+   table != RT_TABLE_MAIN,        +------------+-----------------------------+
+   RT_SCOPE_LINK                  |            |                             |
+                          NEWROUTE|      DELROUTE|            NEWROUTE + RTA_MULTIPATH
+                          !MULTIPATH|            |                           |
+                                   v            v                           v
+                    kfib_urib_add_one_route  kfib_urib_del_one_route   log "Got a multipath
+                                   |            |                      route" (TODO, dropped)
+                                   v            v
+                        lnx ifindex -> NXOS ifindex -> IOD  (see ifindex/IOD diagram)
+                                   |
+                                   v
+                    urib_add_one_route / urib_delete_one_route (urib_pib_hdl)
+                                   |
+                                   v
+                            URIB process (out of scope)
+```
+
+**Deep call chain (stable anchors):**
+
+1. `kfib_nl_thread` → `kfib_nl_kernel_read` loops on
+   `kfib_wait_for_ip_input` (which `FD_SET`s every `nl_sock` in `nl_sock_list`
+   and blocks in `tsp_select`).
+2. On readable fd: `tsp_recvmsg` → iterate `NLMSG_OK`/`NLMSG_NEXT`; handle
+   `NLMSG_DONE` / `NLMSG_ERROR` (ACK vs real error) → `kfib_nl_info_fetch`.
+3. `kfib_nl_info_fetch`: **ignores anything with `snl.nl_pid != 0`** (only kernel-
+   originated messages), then `switch(nlmsg_type)`: `RTM_NEWROUTE`/`RTM_DELROUTE`
+   → `kfib_nl_route_change`; `RTM_NEWADDR`/`RTM_DELADDR` → `kfib_nl_intf_addr`
+   (**body `#if 0`**); `RTM_NEWLINK`/`RTM_DELLINK` → no-op.
+4. `kfib_nl_route_change` filter ladder (each an early `return 0`) — condition
+   shapes, symbolic: `nlmsg_type ∈ {NEWROUTE,DELROUTE}`; `rtm_type == RTN_UNICAST`;
+   `!(rtm_flags & RTM_F_CLONED)`; `rtm_protocol != RTPROT_REDIRECT`;
+   **`rtm_protocol != RTPROT_BIRD`** (skips routes URIB itself injected — the
+   anti-loop guard, see ADR-002); `rtm_src_len == 0`; **`rtm_table == RT_TABLE_MAIN`**;
+   `rtm_scope != RT_SCOPE_LINK`.
+5. `kfib_nl_parse_rtattr` (`RTA_OK`/`RTA_NEXT` walk) fills `tb[RTA_MAX+1]`; pull
+   `RTA_OIF` (→ `if_indextoname`), `RTA_DST`, `RTA_GATEWAY`, `RTA_PREFSRC`,
+   `RTA_PRIORITY` (metric). Family gate: only `AF_INET` (IPv4) is programmed.
+6. `RTM_NEWROUTE` & **not** `RTA_MULTIPATH` → `kfib_urib_add_one_route`;
+   `RTM_DELROUTE` → `kfib_urib_del_one_route`. **`RTA_MULTIPATH` (ECMP) is
+   logged and dropped — a TODO, not programmed** (ADR-006).
+
+**Runtime-dependent branch (`unverified` from static code):** *which* filter arm
+drops a given route (e.g. was it `RTPROT_BIRD`, or `table != MAIN`) depends on the
+live kernel route attributes. To confirm on a switch, enable
+`debug kfib events` + `debug kfib errors` and read
+`show kfib internal event-history events|errors` — `kfib_nl_route_change` emits a
+`KFIB_DBG_EVT("vrf %s: %s %s proto %d table %d", …)` line per message and a
+distinct `KFIB_DBG_ERR` per drop reason. The add/del success lines
+(`ADD: Success prefix …` / `DEL: Success …`) confirm the programmed arm.
+
+---
+
+## 6. ifindex / IOD translation (`kfib_urib.c`)
+
+Both `kfib_urib_add_one_route` and `kfib_urib_del_one_route` translate the Linux
+OIF into the NX-OS identifiers URIB expects:
+
+_ASCII rendering (source diagram was mermaid):_
+
+```
+ifindex / IOD translation (kfib_urib.c)
+
+  lnx_ifindex (RTA_OIF from kernel)
+    |
+    v
+  kfib_lnx_to_csco_ifindex()
+    |
+    v
+  lpss_lookup(kim_nxos_lpss_if_index_handle, key = lnx_ifindex)
+    |        -> NXOS if_index_t     [reads KIM's volatile:kim_nxos_if_handle_db]
+    v
+  im_get_iod_frm_ifindex(ifindex) -> iod (if_ordinal)
+    |
+    v
+  sprintf_if_index(ifname, ifindex)
+    |
+    v
+  urib_add_one_route / urib_delete_one_route
+    (urib_pib_hdl, tid, prefix, mask, next_hop, iod, ...)
+```
+
+- **LPSS databases are KIM's.** `kfib_kim_lpss_init` opens
+  `KIM_LNX_IF_HANDLE_URI = "volatile:kim_lnx_if_handle_db"` and
+  `KIM_NXOS_IF_HANDLE_URI = "volatile:kim_nxos_if_handle_db"` **read-only**
+  (`LPSS_AM_READ`). Only the **nxos** handle is used for the lnx→nxos lookup;
+  the lnx handle is opened but not consulted on this path (opened for symmetry /
+  future reverse lookup). (This mirrors KIM's LPSS producer side, KSTACK-039.)
+- **nh flags** are derived from the kernel route scope by
+  `kfib_urib_get_nh_flags`: `RT_SCOPE_LINK → URIB_NH_ATTACHED_FLAG |
+  URIB_NH_DIRECT_FLAG`; `RT_SCOPE_HOST → URIB_NH_ATTACHED_FLAG |
+  URIB_NH_LOCAL_FLAG`.
+- **⚠ hardcoded fallback (bug smell):** in `kfib_urib_del_one_route`, if
+  `kfib_lnx_to_csco_ifindex` fails, the code forces `ifindex = 0x1a101400` and
+  proceeds (see `//TODO: Hard coding it for now`). Treat as volatile/technical
+  debt (ADR-007).
+- **name translation helpers** `kfib_csco_to_lnx_ifname` / `kfib_lnx_to_csco_ifname`
+  swap `/` ↔ `-` (Linux netdev names can't contain `/`).
+
+---
+
+## 7. MTS spine & per-VRF socket lifecycle
+
+### 7.1 MTS bind / register
+
+`kfib_mts_bind` (called from `main` before sysmgr handshake):
+
+- `kfib_sdb_init` (fsrv SDB subscriber, `NO_MTS_INTERACTION`).
+- `mts_bind(LNODE_SUP, MTS_SAP_KFIB_SYSMGR, …)` → `smq`; `mts_recv_q_unblock`.
+- `mts_bind(LNODE_SUP, MTS_SAP_KFIB, …)` → `kfibq`; `mts_recv_q_unblock`.
+- For every row in `kfib_notifs[]`, `mts_options_set(kfibq, opc,
+  MTS_OPTION_REGISTER | MTS_OPTION_PERSISTENT)`.
+
+`kfib_notifs[]` (the dispatch table) currently has **exactly one live row**:
+
+| MTS opcode | Handler | Status |
+|-----------|---------|--------|
+| `MTS_OPC_KIM_NS_OPERATION` | `kfib_process_kim_update` | **live** |
+| `MTS_OPC_URIB` / `MTS_OPC_U6RIB` → `kfib_process_notify_route` | — | **`#if 0` (dead)** |
+
+Because the URIB rows are compiled out **and** `urib_notify_request` is `#if 0`
+in `kfib_init_urib`, KFIB **registers a URIB client but never actually receives
+URIB route notifications** — the "URIB → kernel" direction does not run (§8,
+ADR-003).
+
+### 7.2 KIM namespace event → add/remove a VRF netlink socket
+
+_ASCII rendering (source diagram was mermaid):_
+
+```
+KIM namespace event -> per-VRF netlink socket lifecycle
+
+  KIM emits MTS_OPC_KIM_NS_OPERATION (kim_ns_notif_t)
+    |
+    v
+  kfib_process_kim_update()
+    |
+    v
+  == kim_msg->operation? ===========================================
+    |                                        |
+    | KIM_NS_CREATE                          | KIM_NS_DELETE
+    v                                        v
+  kfib_nl_ns_add(ns_name)                  kfib_nl_ns_del(ns_name)
+    |                                        |
+    v                                        v
+  tsp_open(NETNS_RUN_DIR/ns_name)          find entry by ns_name
+    -> ns_fd                                 tsp_close(nl_sock)
+    |                                        LIST_REMOVE + KFIB_FREE
+    v                                        max_nl_socks--
+  setns(ns_fd, CLONE_NEWNET)   enter VRF netns
+    |
+    v
+  kfib_nl_create_sock()        socket created INSIDE the VRF netns
+    |
+    v
+  setns(default_ns_fd, CLONE_NEWNET)   return to default netns
+    |
+    v
+  table_id = l3vm_context_get_table_id(ns_name, IPV4, DEF_TABLE)
+    |
+    v
+  LIST_INSERT_HEAD(nl_sock_list); max_nl_socks++
+    |
+    v
+  next kfib_wait_for_ip_input() select() picks up the new fd
+```
+
+The next `select()` iteration in `kfib_wait_for_ip_input` picks up the new fd
+set. The default VRF socket is created once at init in `kfib_nl_init`
+(`ns_name = L3VM_DEF_CONTEXT_NAME`, `ns_fd = /proc/self/ns/net`).
+
+---
+
+## 8. Kernel programming sequences
+
+These are the concrete Linux-kernel interactions KFIB performs (all in
+`kfib_netlink.c` unless noted). They are the "kernel programming" surface of the
+library.
+
+### 8.1 NETLINK_ROUTE socket creation (`kfib_nl_create_sock`)
+
+1. `tsp_socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)`.
+2. `bind()` with `sockaddr_nl { nl_family = AF_NETLINK, nl_groups =
+   RTMGRP_LINK | RTMGRP_IPV4_ROUTE | RTMGRP_IPV4_IFADDR }` — subscribe to link,
+   IPv4-route and IPv4-ifaddr multicast groups.
+3. `setsockopt(SO_RCVBUF, 1 MiB)` (`1024*1024`).
+4. `getsockname()` to read back the assigned address.
+5. `fcntl(F_SETFL, O_NONBLOCK)` — non-blocking event socket.
+   (A `netlink_install_filter` TODO notes future filtering of KFIB-programmed
+   routes.)
+
+### 8.2 Network-namespace (VRF) hopping (`kfib_nl_ns_add`)
+
+- `tsp_open("<NETNS_RUN_DIR>/<ns_name>", O_RDONLY)` → ns fd.
+- `setns(ns_fd, CLONE_NEWNET)` to **enter** the VRF netns, create the netlink
+  socket *there* (so it sees that VRF's routes), then `setns(default_ns_fd,
+  CLONE_NEWNET)` to **return**. This "enter-create-return" is the standard NX-OS
+  per-VRF socket pattern; `default_ns_fd` is captured from `/proc/self/ns/net`
+  at init. (A `//TODO` notes the ns file is deleted by KIM, so the fd is closed
+  after socket creation.)
+
+### 8.3 select()-driven RX (`kfib_wait_for_ip_input` + `kfib_nl_kernel_read`)
+
+- Rebuild `fd_set` over all `nl_sock`s; `max_fd = max(nl_sock+1, …)`.
+- `tsp_sched_yield()` + `tsp_select(max_fd, &fds, …)` block; on ready, per-fd
+  `FD_ISSET` → `tsp_recvmsg` → NLMSG iteration (§5).
+
+### 8.4 rtnetlink message parse (`kfib_nl_parse_rtattr`)
+
+- `RTA_OK`/`RTA_NEXT` walk building `tb[type] = rta`; logs a "Deficit" error on
+  leftover length. Attribute pulls use `RTA_DATA`.
+
+### 8.5 (compiled out) netlink route *program* to kernel (`kfib_nl_fill_route`)
+
+- The entire reverse-direction writer — build `{nlmsghdr n; rtmsg r; buf}` with
+  `RTM_NEWROUTE`/`RTM_DELROUTE`, `NLM_F_CREATE|REQUEST|ACK`, `addattr_l(RTA_DST)`,
+  best-hop loop (`addattr_l(RTA_GATEWAY)` for recursive NH, `addattr32(RTA_OIF)`
+  for attached NH via `if_nametoindex`), `sendmsg`, then
+  `kfib_nl_read_response` — is under `#if 0`. The helpers `addattr_l`,
+  `rta_addattr_l`, `addattr32` remain compiled (they are outside the `#if 0`) but
+  are only reachable from this dead writer. **KFIB does not currently program the
+  kernel FIB.**
+
+---
+
+## 9. External interactions / boundaries (out of scope, but named)
+
+| Boundary | Direction | Interface |
+|----------|-----------|-----------|
+| **Linux kernel (rtnetlink)** | kernel → KFIB | `NETLINK_ROUTE` multicast RX (`RTM_NEWROUTE/DELROUTE`); per-VRF sockets via `setns` |
+| **URIB** | KFIB → URIB | `urib_api_init`, `urib_register`, `urib_add_one_route`, `urib_delete_one_route`, `urib_send_notify_ack`, `urib_deregister` (client `SRVNAME_KFIB`, queue `kfibq`) |
+| **KIM** | KIM → KFIB | MTS `MTS_OPC_KIM_NS_OPERATION` (`kim_ns_notif_t`: create/delete VRF netns); owns the LPSS `kim_lnx/nxos_if_handle_db` KFIB reads |
+| **LPSS** | KFIB → (KIM DBs) | `lpss_open` (read-only) + `lpss_lookup` for lnx→nxos ifindex |
+| **IM (interface mgr)** | KFIB → IM | `im_get_iod_frm_ifindex`, `ksink_im_get_ifindex_frm_iod` (IOD ↔ ifindex) |
+| **L3VM** | KFIB → L3VM | `l3vm_api_init`, `l3vm_context_get_table_id` (VRF ns → NX table-id), `l3vm_if_get_table_id` (in dead tx path) |
+| **sysmgr** | ↔ KFIB | handshake, supstate, heartbeat (`smq`); `run=conditional` gated |
+| **sdwrap / mtrack / TSP** | KFIB ↔ | debug/event-history, memory tracking, thread/socket services (`tsp_*`) |
+
+**Producer of `MTS_OPC_KIM_NS_OPERATION` — ⚠ none found in-tree (`unverified`, dormant).**
+The opcode is defined in `<isan/mts/include/mts_kim_opc.h>` and its payload
+`kim_ns_notif_t` in `<isan/kim_utils.h>` (both KIM-owned), and `kfib.conf` makes
+KFIB start after `SRVNAME_KIM` — so KIM is the *expected* sender. But a scoped
+search of the entire `standalone/infra` tree (verified this pass) finds the symbol
+**only** in KFIB's own `kfib_notifs[]` table: **there is no in-tree `mts_send` of
+this opcode** (the KIM sender catalog KSTACK-041 also omits it). So in this image
+the per-VRF socket sub-flow (§7.2) is **effectively dormant** — registered but not
+exercised, in the same category as the `#if 0` paths — unless KIM emits the opcode
+from a path outside the code index. **To confirm at runtime:** create a non-default
+VRF on the switch and look for the `"Successfully added <ns>, num_socks N"` line in
+`show kfib internal event-history events`; if it never appears, the producer is not
+emitting the opcode.
+
+---
+
+## 10. Concurrency & locking
+
+- **Four threads** (§3) share `nl_sock_list`, `fds`, and `urib_pib_hdl` with **no
+  visible lock**: the netlink thread iterates/reads `nl_sock_list` while the MTS
+  thread mutates it in `kfib_nl_ns_add`/`kfib_nl_ns_del`
+  (`LIST_INSERT_HEAD`/`LIST_REMOVE`/`KFIB_FREE`). This is a **lock-free
+  list mutated by one thread and walked by another** → a torn-walk / use-after-free
+  hazard window (ADR-008). Stated as an observation from static reading, not a
+  confirmed field defect.
+- The heartbeat thread is deliberately isolated so a slow route burst cannot
+  starve sysmgr heartbeats (which would get KFIB killed — see §3 comment).
+
+---
+
+## 11. HA / sysmgr / restart
+
+- `kfib_init_sysmgr`: `sysmgr_handshake` → role; `sysmgr_heartbeat(TRUE)`; create
+  the wheel/heap active-timer sets and the `kfib_heartbeat_timer`
+  (`kfib_process_heartbeat_timer` re-arms on `sysmgr_heartbeat_timeout_get`).
+- HA policy (`kfib.conf`): single-sup **stateless with default_config**; dual-sup
+  **stateful** then **switchover**; `standby_mode = sync`. But the actual
+  state-sync code (`kfib_send_lconf`/`kfib_recv_lconf`, `kfib_standby_loop`,
+  `MTS_OPC_INTERNAL_KFIB[_PSS]`) is `#if DO_IT_LATER` — **not built**. In practice
+  a KFIB restart re-reads the kernel FIB fresh (URIB is authoritative; the
+  `RTPROT_BIRD` filter prevents re-importing URIB's own routes).
+
+---
+
+## 12. Architecture Decision Records (ADR)
+
+**ADR-001 — Netlink-multicast import, one socket per VRF netns.** KFIB subscribes
+to `RTMGRP_IPV4_ROUTE` (+link/ifaddr) per network namespace rather than polling
+`/proc` or the kernel FIB. *Rationale:* rtnetlink is the kernel's native
+route-change event bus, and VRFs are Linux netns, so a socket created *inside*
+each netns naturally scopes to that VRF's table. *Trade-off:* a socket + fd per
+VRF and a `setns` dance at creation; the `select()` set must be rebuilt as VRFs
+come/go.
+
+**ADR-002 — `RTPROT_BIRD` (and `msg->pib == urib_pib_hdl`) as the anti-loop
+guard.** Routes that URIB itself pushed into the kernel are marked with protocol
+`RTPROT_BIRD`; KFIB skips them so it never re-imports its own output. *Rationale:*
+without it, kernel↔URIB would form a feedback loop. *Trade-off:* couples KFIB to a
+convention (the injecting agent must stamp `RTPROT_BIRD`); a `//TODO` in the code
+still wants a proper netlink filter (`netlink_install_filter`).
+
+**ADR-003 — URIB client registered but notifications compiled out.** KFIB calls
+`urib_register` (so it can *program* routes) but `urib_notify_request` and the
+`MTS_OPC_URIB/U6RIB → kfib_process_notify_route` rows are `#if 0`. *Rationale:* the
+live product only needs kernel→URIB import; the reverse (URIB→kernel) is future
+work. *Trade-off:* the registered-but-silent client is a discoverability trap — a
+reader may assume KFIB reacts to URIB changes. Documented here so it isn't mined.
+
+**ADR-004 — Standby state-sync deferred (`DO_IT_LATER`).** The stateful
+standby-sync machinery exists but is compiled out; `kfib.conf` still declares
+`standby_mode=sync`/`restart=stateful`. *Rationale:* KFIB is cheap to rebuild from
+the kernel FIB at restart, so full PSS/lconf sync was not prioritized.
+*Trade-off:* the config over-promises vs the built behavior; a switchover re-reads
+the kernel rather than resuming warm.
+
+**ADR-005 — CLI/overlay boilerplate retained but unimplemented.** `kfib_cmd.h`
+carries VXLAN/NVGRE/VNI/multicast help strings and `kfib.cmd` exposes only
+`show kfib internal event-history …` + `debug kfib …`. *Rationale:* scaffolding
+copied from a fuller template. *Trade-off:* misleading surface; there is no
+overlay/encap feature in KFIB.
+
+**ADR-006 — IPv4-unicast-only, multipath dropped.** Only `AF_INET`
+`RTN_UNICAST` routes in `RT_TABLE_MAIN` are programmed; `RTA_MULTIPATH` (ECMP) and
+IPv6 are logged/ignored. *Rationale:* minimum viable importer. *Trade-off:* ECMP
+and v6 kernel routes are silently not mirrored to URIB (`//TODO` markers).
+
+**ADR-007 — Hardcoded ifindex fallback on delete.** When lnx→nxos ifindex
+translation fails during a delete, KFIB forces `ifindex = 0x1a101400` and proceeds.
+*Rationale:* ensure the delete still reaches URIB when the LPSS map has already
+been torn down (interface removed before route). *Trade-off:* a magic constant that
+can misattribute the next-hop interface; flagged as technical debt (`//TODO`).
+
+**ADR-008 — Lock-free `nl_sock_list` shared across threads.** The netlink thread
+walks the list while the MTS thread inserts/removes/frees entries, with no mutex.
+*Rationale:* VRF churn is rare and the code predates a hardening pass.
+*Trade-off:* a real torn-walk / use-after-free window on VRF add/delete under
+load; a candidate for an RCU-style or mutex fix. Observation, not a confirmed
+field crash.
+
+---
+
+## 13. Cross-reference
+
+- **FLOW (kfib route-sync)** — `references/kfib-route-sync.md`: the ordered
+  kernel→URIB hop list + the KIM-ns→per-VRF-socket sub-flow, with the exact
+  `show kfib internal event-history` commands to confirm which branch fired.
+- **`kim-process-architecture.md`** — the **expected producer** of
+  `MTS_OPC_KIM_NS_OPERATION` (though no in-tree sender is indexed in this image —
+  see §9, `unverified`) and the **owner** of the LPSS `kim_lnx/nxos_if_handle_db`
+  KFIB reads (KSTACK-039). KFIB is a *consumer* of both (the LPSS read is live;
+  the ns-event subscription is dormant).
+- **URIB** — out of scope here; KFIB is a URIB client (`urib_*` API).
+
+> As-of hints in this doc (thread count, the single live `kfib_notifs[]` row, the
+> `#if 0` inventory, the `0x1a101400` fallback) are from a 2026-07-11 read of image
+> `space_kkomarag_COV_10_7_0_IMG9_0_201`. Anchor on function names and
+> `MTS_OPC_*` / `RTM_*` / `urib_*` symbols; re-verify line-level detail per release.

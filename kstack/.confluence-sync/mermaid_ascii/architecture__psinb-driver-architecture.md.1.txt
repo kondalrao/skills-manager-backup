@@ -1,0 +1,23 @@
+RX datapath (ingress: ASIC punt -> LCND)
+
+ ASIC        ps_sone0_rx    netif_        psinb_rx_      rni_handle_platform
+ netdev      _handle_frame  receive_skb   handle_frame   (klm_rni_lcnd)
+   |             |             |             |               |
+   | punted frame|             |             |               |
+   |------------>|             |             |               |
+   |             | skb->dev = ins_ps_inb / ins_app_inb       |
+   |             |[self]       |             |               |
+   |             | normalize (eth restore, vlan clear,       |
+   |             |  pkt_type, protocol)      |               |
+   |             |[self]       |             |               |
+   |             | netif_receive_skb  (RX_HANDLER_CONSUMED)  |
+   |             |------------>|             |               |
+   |             |             | rx_handler on ps-inb        |
+   |             |             |------------>|               |
+   |             |             |             | mbit short-circuit?          |
+   |             |             |             | resolve rni via kallsyms     |
+   |             |             |             |[self]         |
+   |             |             |             | skb = rni_handle_platform_lcnd(skb)
+   |             |             |             |-------------->|
+   |             |             |             | NULL=CONSUMED / else PASS|ANOTHER
+   |             |             |             |<..............|

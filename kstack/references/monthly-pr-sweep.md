@@ -1,0 +1,71 @@
+# Monthly incremental PR sweep (operational reference)
+
+- **FLOW**: FLOW-010
+- **Protocol**: (operational / maintenance — not a datapath flow)
+- **Platform**: platform-independent (repo maintenance)
+- **status**: verified
+- **date**: 2026-07-10
+- **tooling**: `bug_reports/tools/` in the Kstack workspace (companion to this skill)
+
+Repeatable monthly refresh of the per-component PR/bug reports. See METHOD-017 for the
+rationale; this file is the operational step ladder.
+
+## State
+`bug_reports/_sweep_state.json`: `{ repo, branch, components{ <COMP>{ path, last_sha,
+last_run, count, baseline_pending } } }`. Active = `baseline_pending:false`
+(currently KLM_PS_INB, KLM_VDC). Pending = KIM, KVFIB, LCND. `repo` is only a
+default/last-known-good: the `/nobackup/.../<IMG>` clone rotates per build, so the
+real repo is a per-run input (`--repo` > `KSTACK_REPO` > TTY prompt > stored `.repo`).
+
+## Steps
+1. `kstack_pr_sweep.sh --list --repo <PATH>` — resolve+validate the repo first
+   (`--repo` > `KSTACK_REPO` > TTY prompt > stored `.repo`; dir + git work tree +
+   `<.branch>` must resolve, else abort non-zero; validated path persisted to `.repo`).
+   Then `git fetch -q origin nx_main` once; per active component compute the delta
+   (SHA-range `git log <last_sha>..origin/nx_main -- <path>`, or `--since=<last_run>`
+   when `<last_sha>` is no longer an ancestor), extract CSCIDs (`CSC[a-z]{2}[0-9]{5}`),
+   subtract existing `<CSCID>.md`, write `.worklist/<comp>.txt`.
+2. `monthly_sweep.sh` — if all `0 new`, log "nothing to do", exit 0. Else per component
+   with new CSCIDs: render `enrich_prompt.tmpl` and run `cursor-agent` headless (or hand
+   the prompt to a human if `cursor-agent` is absent).
+3. Enrichment writes `<CSCID>.md` (+ `Summary.md` row + `_kb_verification.md` KB draft),
+   core-fix-only, bug-vs-code flagged, symbol anchors, CDETS unit tests.
+4. **Verify-before-advance:** confirm every expected `<CSCID>.md` on disk, then
+   `kstack_pr_sweep.sh --advance <COMP> <head_sha>` (recounts from disk). Advance ONLY
+   verified components.
+5. **KB approval gate:** a human reviews `_kb_verification.md` and applies any
+   `KSTACK-*/FLOW-*/METHOD-*` writes to the skill by hand. The runner never writes
+   `~/.agents/skills/kstack/**`.
+6. **Confluence publish (step 4 of `monthly_sweep.sh`):** for every component already
+   in `bug_reports/_confluence_map.json`, run `tools/confluence_publish.py --component
+   <COMP>` (Markdown -> storage XHTML by `md_to_confluence.py` -> Confluence Cloud REST
+   v2 create/update). New CSCID -> new child page; `Summary` always refreshed; an
+   existing bug page updated only when its `.md` `md_sha256` changed. Each page gets a
+   TOC macro + full-width tables, and **page-level wide width** is set via the Cloud v2
+   page property `content-appearance-published=full-width` (and `-draft`) at
+   `/wiki/api/v2/pages/{id}/properties` (needs the REST token — the MCP cannot set page
+   appearance). The stage sources creds from `~/.config/kstack/confluence.env` (mode
+   600; `CONFLUENCE_EMAIL` + `CONFLUENCE_API_TOKEN`) and drives `cursor-agent` with
+   `publish_confluence_prompt.tmpl`; it skips (warning) if the token file / map /
+   `cursor-agent` is absent. The token is NEVER printed or written to any file.
+
+## Divergence points / gotchas
+- History rewrite on `nx_main` → SHA no longer an ancestor → date fallback (dedup by
+  existing report keeps it safe).
+- Rotated/stale repo path (the `/nobackup/.../<IMG>` clone changes each build) → resolve
+  + validate aborts non-zero with a clear message; pass `--repo`/`KSTACK_REPO` (cron has
+  no TTY so it MUST). Never runs the delta against a dead path.
+- `cursor-agent` missing → prompt + worklist emitted, watermark NOT advanced.
+- Enrichment partial (some `<CSCID>.md` missing) → watermark NOT advanced; re-run picks
+  up the remainder next month.
+- New component → full initial pass first, then flip `baseline_pending:false` +
+  `--advance` at the current head.
+- Confluence wide width can't be set via the Atlassian MCP → publish uses a REST API
+  token (`~/.config/kstack/confluence.env`) + the v2 page-property route. A component is
+  mirrored only after it appears in `_confluence_map.json`, so it is never auto-published
+  before you choose to (e.g. `KLM_VDC` stays out until its first publish). Token is never
+  persisted (not in the map/state/logs) — reference only the file path + var names.
+
+## Onboarding a pending component (KIM / KVFIB / LCND)
+Full historical pass → produce all `<CSCID>.md` + `Summary.md` + `_kb_verification.md`
+→ set `baseline_pending:false` in state → `--advance <COMP> <head_sha>`.

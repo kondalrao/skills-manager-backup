@@ -1,0 +1,141 @@
+> Auto-generated replica of `references/netbroker-rtnl-trap.md`. Edit the skill source (`~/.agents/skills/kstack/references/netbroker-rtnl-trap.md`), not this Confluence page. Changes appear on the next sync run.
+
+# FLOW-013: Netbroker RTNL trap -> nbproxy -> NXOS control plane
+
+- **flow**: FLOW-013
+- **protocol**: RTNL admin (NEWLINK/DELLINK/SETLINK, NEWADDR/DELADDR, NEWROUTE/DELROUTE, NEWNEIGH/DELNEIGH)
+- **platform**: platform-agnostic kernel hook + NXOS userspace (default workspace context Silicon One)
+- **status**: verified (static/source); runtime whitelist/broker-registration arms unverified without switch probe
+- **date**: 2026-07-26
+- **component**: Netbroker stack under `standalone/infra/kstack/netbroker/`
+- **entries**: KSTACK-054
+- **architecture**: `architecture/netbroker-architecture.md` (design, usages, ADR-001..008)
+- **kernel patches**: `standalone/third-party/src/kernel/nx-linux/patches.x86e-6.6/netbroker-*.patch`
+- **related**: KFIB (FLOW-012) observes kernel routes **after** they exist; netbroker **prevents** unapproved writers from programming kernel directly. KIM/ipfib/netstack: are whitelist bypass writers (KSTACK-054).
+
+## Purpose (source-of-truth model)
+Third-party Linux admin (`ip`, `ifconfig`, shell scripts) must not mutate kernel network state directly. Netbroker **short-circuits** the kernel RTNL/ioctl/socket path, forwards the original request to **nbproxy** via genl, and nbproxy updates the **NXOS control plane** (urib, netstack, vsh, …). The kernel is then updated either by **replaying** the RTNL through the broker's registered socket (`LIBNB_CFG_OK`) or by **NXOS daemons** on the whitelist (`LIBNB_CFG_OK_PROCESSED`).
+
+## Layer map
+| Layer | Symbol / module | Source |
+|-------|-----------------|--------|
+| Kernel framework | `netbroker_rtnl_doit`, `register_netbroker` | `net/netbroker.c`, patches |
+| Cisco KLM | `klm_cisco_nb`, `cisco_nb_rtnl_doit` | `netbroker/kspace/` |
+| Userspace library | `libnb_open_*`, `libnb_ack`, `libnb_update_kernel` | `netbroker/lib/` |
+| NXOS agent | `nbproxy` sysmgr service | `netbroker/nbproxy/` |
+
+## Broker groups (`NB_GRP_*`) and nbproxy handlers
+| Group | RTNL / API | nbproxy `cfg_cb` | NXOS backend |
+|-------|------------|------------------|--------------|
+| `NB_GRP_INTERFACE` | NEWLINK/DELLINK/SETLINK, NEWADDR/DELADDR | `int_cfg_req` | vsh / netstack IP |
+| `NB_GRP_RIB` | IPv4 NEWROUTE/DELROUTE (dynamic) | `urib_cfg_req` | urib |
+| `NB_GRP_RIB6` | IPv6 NEWROUTE/DELROUTE | `u6rib_cfg_req` | u6rib |
+| `NB_GRP_STATIC_ROUTE` | static routes | `ip_cfg_req` | static-route PIB |
+| `NB_GRP_NEIGHBOR` | NEWNEIGH/DELNEIGH | `am_cfg_req` | neighbor mgr |
+| `NB_GRP_ETHTOOL` | ethtool ioctls | ethtool handler | controlled ops |
+| `NB_GRP_SOCKET` | bind/connect/release hooks | socket handler | socket policy |
+
+One broker per group (`grp_tbl[]` in `cisco_netbroker.c`); nbproxy registers all groups at `nb_libnb_init_brokers()`.
+
+## LIVE flow: third-party `ip route add` (RTNL example)
+1. User process sends `RTM_NEWROUTE` on `NETLINK_ROUTE`.
+2. `rtnetlink_rcv_msg` -> `netbroker_rtnl_doit` -> `cisco_nb_rtnl_doit`.
+3. **Bypass gates** (any match -> `NETBROKER_CONTINUE`, kernel processes normally):
+   - [branch] `disable_rtnl_hook` module param set
+   - [branch] `cisco_nb_allow_by_current()` whitelist (comm names: `ipfib`, `kim`, `netstack:`, `urib`, `u6rib`, `ifmgr`, …; Smack `vmo`; LC LXC cgroup; non-init user_ns + `CAP_NET_ADMIN`)
+   - [branch] `get_grp_map` returns `NB_GRP_NONE` (unmapped family/type)
+   - [branch] no broker registered for group
+   - [branch] sender `NETLINK_CB(skb).portid == ne->rtnl_pid` (broker replay path)
+   - [branch] `check_interface_change` returns continue-only (e.g. NEWLINK size probe)
+4. **Trap path** (broker registered, sender not whitelisted):
+   - `get_grp_map` classifies route (dynamic vs `NB_GRP_STATIC_ROUTE` via fib lookup on DELROUTE with unspecified protocol)
+   - [branch] `cisco_nb_block_change(grp)` -> `-EOPNOTSUPP`
+   - [branch] interface forbidden attrs (IFLA_IFNAME/ADDRESS on NEWLINK/SETLINK) -> `-EOPNOTSUPP`
+   - `nb_send_request(ne, subgrp, NB_API_RTNL, cloned skb, nb_rtnl_resp_cb, ...)`
+   - return `NETBROKER_HANDLED`, `*rc = -EINTR` (kernel RTNL path aborted; no premature ACK)
+5. **Userspace** (`request_msg_handler` in `libnb-msgs.c`):
+   - parse genl + `NB_A_ORIG_MSG` (original RTNL bytes)
+   - encode -> `libnb_cfg_data` via group parser (`rib_encode`, `intfc_encode`, …)
+   - `cfg_cb` (e.g. `urib_cfg_req`): `nb_add_route` / `nb_del_route` -> urib APIs
+6. **Completion semantics** (`libnetbroker.h`):
+   - [branch] `LIBNB_CFG_OK_PROCESSED`: NXOS owns kernel programming; `libnb_ack(PROCESSED)` only; ipfib/netstack programs kernel later via whitelist
+   - [branch] `LIBNB_CFG_OK`: broker may call `libnb_update_kernel` -> replays stored RTNL on `nb->rtnl_sk`; hook sees matching `rtnl_pid` -> pass-through
+7. `libnb_ack` -> genl `NB_C_REQUEST` response -> `nb_rcv_request` -> `nb_rtnl_resp_cb` -> `netlink_ack` to original user socket.
+
+## Parallel hook surfaces (same broker pattern)
+- **Legacy ioctl**: `dev_ioctl` -> `netbroker_dev_ioctl` -> `cisco_nb_dev_ioctl` (`cisco_nb_ioctl.c`); used by `ifconfig`-style tools.
+- **Socket ioctl**: `sock_ioctl` / `compat_sock_ioctl` -> `cisco_nb_sock_ioctl`.
+- **Socket bind/connect/release**: separate kernel patches -> `cisco_nb_sock.c` handlers -> `NB_GRP_SOCKET`.
+
+## Module params (KLM tunables)
+- `disable_rtnl_hook`, `disable_dev_ioctl_hook`, `disable_sock_*_hook` — bypass hooks for debug
+- `block_rib`, `block_interface`, `block_neighbor`, `block_mcast_group`, `block_ethtool` — deny trapped requests with `-EOPNOTSUPP` even when broker exists
+- `container_id`, `is_standby` — ToR / HA behavior
+
+## Divergence / open arms (unverified without switch)
+- Exact whitelist match for a given shell invocation (parent comm, Smack label, cgroup)
+- UCS vs NXOS `#ifdef UCS_SYSTEM_IMG` branches (static route pass-through, interface ns move)
+- HA replay: `nb_uxrib_kernel_save` / `nb_uxrib_replay` after supervisor switchover
+- Whether a specific VRF context uses `OK` vs `OK_PROCESSED` for interface addr ops
+
+## Switch probes (read-only)
+See `knowledge/switch-commands.md` Netbroker block: `/proc/net/cisco_nb_0`, module params under `/sys/module/klm_cisco_nb/parameters/`.
+
+## Runtime observability (verified 2026-07-26 on sup LXC)
+| Goal | Tool | Notes |
+|------|------|-------|
+| **E2E validation** (kernel + NX-OS) | METHOD-020 / § E2E validation below | One `ip route add` → 7 perf lines + nbproxy event-history |
+| Prove message reached **nbproxy** | `debug nbproxy events` + `show nbproxy internal event-history events` | Primary userspace proof; filter `operation`, `static route`, `Netbroker failed` |
+| Prove **kernel hook** fired | METHOD-021 perf capture (`cisco_nb_traces:*` or `lcnd_traces:*`) | Stimulus-bound or timed; decode with `perf script -i /bootflash/*.perf` |
+| Read **sparse `pr_info` printk** | `run bash sudo sh -c "dmesg -F /dev/kmsg -P \| grep cisco_nb"` | Plain `dmesg` empty on sup LXC; optional `echo '8 6 1 8' > /proc/sys/kernel/printk` (KSTACK-055) |
+| **Misleading** | bare `run bash dmesg` or plain `sudo dmesg -P` | Permission denied or empty read even when `/dev/kmsg` has records (METHOD-019, KSTACK-055) |
+
+## E2E validation test (verified 2026-07-26 on 172.20.175.107)
+
+**Image:** `10.7(0)IMG9(0.166)` sup LXC. **Test prefix:** `192.0.2.88/32 via 127.0.0.1 dev lo`.
+
+### Procedure
+1. `debug nbproxy events`
+2. `run bash sudo sh -c "rm -f /bootflash/nb.perf /bootflash/nb_traces.txt; perf record -a -e 'cisco_nb_traces:*' -o /bootflash/nb.perf -- ip route add 192.0.2.88/32 via 127.0.0.1 dev lo; perf script -i /bootflash/nb.perf > /bootflash/nb_traces.txt 2>&1"` (**METHOD-021** stimulus-bound)
+3. `show nbproxy internal event-history events | include "IP Netbroker|operation 3|static route|Netbroker failed|Unknown interface"`
+4. `run bash sudo cat /bootflash/nb_traces.txt`
+5. `run bash ip route del 192.0.2.88/32 via 127.0.0.1 dev lo`
+
+Interactive root bash alternative: `run bash sudo bash`, then run perf with `-- ip route add …` and `perf script -i … > /bootflash/nb_traces.txt` (user-verified; `perf script --no-pager` is **invalid** on this util-linux — redirect stdout instead).
+
+### Expected kernel trace (7 lines)
+| # | comm | event | Key fields | Meaning |
+|---|------|-------|------------|---------|
+| 1 | `ip` | `nb_rtnl_doit` | `type=18 group=0` | `RTM_GETLINK` probe — not trapped |
+| 2 | `ip` | `nb_rtnl_doit` | `family=2 type=24 group=4` | `RTM_NEWROUTE` → `NB_GRP_STATIC_ROUTE` |
+| 3 | `ip` | `nb_send_request` | `group=4 seq=N` | genl forward to nbproxy |
+| 4 | `nbproxy` | `nb_rtnl_doit` | `type=18 group=0` | replay link probe (`libnb_update_kernel`) |
+| 5 | `nbproxy` | `nb_rtnl_doit` | `type=24 group=4` | replay route on broker rtnl_sk |
+| 6 | `nbproxy` | `nb_rcv_request` | `group=4 seq=N` | genl request handled |
+| 7 | `nbproxy` | `nb_rtnl_resp` | `msg_type=24 status=0` | netlink ACK to `ip` |
+
+RTNL/type/group decode: `type=24` = `RTM_NEWROUTE`; `group=4` = `NB_GRP_STATIC_ROUTE`
+(`cisco_nb.h`); static classification when `rtm_protocol` is `RTPROT_STATIC`/`BOOT`
+(`cisco_nb_rtnl.c` `get_grp_map`).
+
+### Expected NX-OS trace (nbproxy event-history, same second)
+```text
+IP Netbroker event for operation 3
+IPv4 static route process op 3
+Unknown interface type lo
+Netbroker failed to process config: -19
+```
+Operation **3** = `LIBNB_CFG_ROUTE_ADD`. **-19** = `ENODEV` on `lo` → nbproxy returns
+`LIBNB_CFG_OK` + kernel replay (`nbproxy_ip.c`); route appears in Linux FIB, not URIB.
+
+### Re-verified agent run (2026-07-26T18:58:34Z)
+Agent re-run on 107 produced perf seq=14 and nbproxy timestamps `18:58:34.963312`–`.963404`,
+matching the 7-line kernel sequence above. User interactive run (seq=11) showed the same
+event order at ~4061.203s.
+
+
+## Backlog (not traced in this flow)
+- Full ioctl encode/decode path per `SIOCSIF*`
+- Socket bind/connect/release notification path
+- Ethtool block list semantics
+- Relationship to KFIB: KFIB syncs kernel->URIB for routes that **did** reach kernel; netbroker reduces how often third-party tools bypass NXOS to put them there

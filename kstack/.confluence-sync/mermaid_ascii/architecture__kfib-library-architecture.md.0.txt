@@ -1,0 +1,38 @@
+Process lifecycle & threading (kfib.c)
+
+  main()
+    |
+    v
+  kfib_init_tsp  (TSP proc lock, SRVUUID_KFIB)
+    |
+    v
+  kfib_mts_bind  (smq = MTS_SAP_KFIB_SYSMGR, kfibq = MTS_SAP_KFIB)
+    |            + register kfib_notifs[]  (only KIM_NS_OPERATION live)
+    v
+  kfib_init_sysmgr(smq)  (sysmgr_handshake -> role; start heartbeat timer)
+    |
+    v
+  kfib_sdwrap_init  (debug / event-history)
+    |
+    v
+  == my_sup_state? ==========================================
+    |                                    |
+    | ACTIVE / COLD_STANDBY              | STANDBY
+    v                                    v
+  kfib_thread_init()                   wait for ACTIVE -> goto do_loop
+  +---------------------------------------------+
+  | pthread kfib_sysmgr_thread                  |
+  |   -> kfib_process_heart_msg (smq/sysmgr)    |
+  | pthread kfib_mts_thread                     |
+  |   -> kfib_process_my_msg (kfibq/notif)      |
+  | kfib_nl_init():                             |
+  |   pthread kfib_nl_thread                    |
+  |     -> kfib_nl_kernel_read (netlink RX)     |
+  |   kfib_init_urib()                          |
+  |     -> urib_api_init + urib_register        |
+  |        + kfib_kim_lpss_init                 |
+  | (+ active-timer thread: heartbeat)          |
+  +---------------------------------------------+
+    |
+    v
+  kfib_join_thread()  (tsp_pthread_join)

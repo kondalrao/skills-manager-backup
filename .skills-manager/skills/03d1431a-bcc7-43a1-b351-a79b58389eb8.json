@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "skill_id": "03d1431a-bcc7-43a1-b351-a79b58389eb8",
+  "path": "anywidget-generator",
+  "path_key": "anywidget-generator",
+  "enabled": true,
+  "tags": [],
+  "source": {
+    "type": "local",
+    "ref": null,
+    "subpath": null,
+    "branch": null
+  }
+}

@@ -1,0 +1,5 @@
+source path: /ws/kkomarag-sjc/.agents/skills/kstack
+timestamp: 2026-07-29T14:35:53-0700
+backup scope: SKILL.md and USAGE_COUNTS.md before usage-count auto-update rule correction
+command used: targeted cp backup
+restore note: copy files from this directory back to the source path if rollback is needed

@@ -1,0 +1,59 @@
+> Auto-generated replica of `scripts/README.md`. Edit the skill source (`~/.agents/skills/kstack/scripts/README.md`), not this Confluence page. Changes appear on the next sync run.
+
+# KSTACK scripts
+
+Python helpers for data fetch/parse when an MCP tool is unavailable. Used by the
+`kstack` skill (shared with Cursor + Codex via the skill-dir symlink).
+
+## Conventions
+
+- One purpose per script; update existing scripts instead of duplicating.
+- First line(s): a comment header stating purpose + usage example.
+- No hardcoded secrets/credentials; safe file handling (repo security rules apply).
+- After adding/updating a script, record it under `## Debugging Tools` in
+  `../KNOWLEDGE.md`.
+
+## Written scripts
+
+- `trap_code.py` -- decode a SiliconOne trap code (`enum class la_event_e`) to its
+  name for a PID, e.g. `trap_code.py --pid g200 --code 4` -> `ETHERNET_ARP`.
+  PID -> sdk-dir: `g200=gr2, krypton=krypton, p200=palladium2, g2ll=g2ll`; reads
+  `standalone/third-party/src/siliconone-sdk/<sdk-dir>/include/api/types/la_event.h`.
+  `--all` lists aliases; a name in `--code` does reverse lookup; `--header` bypasses
+  PID/repo resolution. Decoded values are PID/build specific -- reference-only,
+  never stored in `KNOWLEDGE.md` (only the usage is). See `## Debugging Tools`.
+- `group_by_packet.py` -- group a `perf script` dump of `lcnd_traces:*` into one
+  block per packet (per-CPU entry->terminal state machine; NOT a global `skb=`
+  bucket). **Capture (METHOD-021 timed pattern; `<DUR>` ASK user, DEFAULT 10):**
+  ```text
+  run bash sudo sh -c "rm -f /bootflash/lcnd.perf /bootflash/lcnd_traces.txt; \
+    timeout <DUR> perf record -a -e 'lcnd_traces:*' -o /bootflash/lcnd.perf -- sleep <DUR>; \
+    perf script -i /bootflash/lcnd.perf > /bootflash/lcnd_traces.txt 2>&1"
+  ```
+  then `group_by_packet.py /bootflash/lcnd_traces.txt` (or SSH-pulled copy). See
+  METHOD-021 for remote stream and netbroker stimulus-bound variant. Mandatory
+  `input`; output defaults to `<input>.grouped.log` (or `<input>.<dir>.grouped.log`
+  with a query).
+  `-q/--query k=v` filters (mandatory `dir` = in|out|mgmt; other keys fold aliases,
+  hex==dec, MAC colon==dotted); `--list-params` prints all keys grouped by
+  direction. **No partial match**: if the exact AND-query returns 0 the packet was
+  not seen -- report that, do not dump a subset-match block. Grounded in
+  `lcnd_trace.h` + `lcnd_n9k.c` (METHOD-015 / KSTACK-024).
+
+## Candidate scripts (not yet written)
+
+- `decode_lc_flags.py` -- decode a hex `lc_flags` value into `LC_FLAGS_*` names
+  (full bitset from the `LC_FLAGS_*` enum in `kim_utils.h`; see METHOD-003 /
+  KSTACK-004).
+- (DONE, folded into `group_by_packet.py`) decap/encap block parsing + field
+  query: punt-header `relay_id/slp/dlp/ssp/dsp/punt-code/punt-source` and inject
+  `dmod/slot/dest/...` are now queryable via `-q` (`--list-params`). A separate
+  structured-JSON emitter could still be added if a session needs machine output.
+- `decode_punt_header.py` -- decode the SONE `la_packet_punt_header_t` fields from a
+  raw hexdump (mirrors the `lcnd_sone_inband_decap` header parse).
+- `correlate_ifindex_vlan.py` -- parse an LCND ifindex/`lc_vlan` hash-table dump and
+  correlate ifindex <-> `lc_vlan` (KSTACK-002 investigations).
+
+Pick the next one to write based on what the live session needs; update an existing
+script rather than adding a near-duplicate, and record it under `## Debugging Tools`
+in `../KNOWLEDGE.md` after writing.

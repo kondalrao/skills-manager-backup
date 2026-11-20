@@ -1,0 +1,34 @@
+RX PATH (ingress: ASIC punt -> LCND)                 TX PATH (egress: LCND inject -> ASIC)
+
+ASIC netdevs (real):                                 klm_lcnd (lcnd_*_encap)
+leaba0_0 / pie-eth0 / leaba12_0 /                            |
+leaba11_5 / leaba11_0                                        |  TX inject: dev_queue_xmit(ps-inb)
+        |                                                    v
+        |  RX punt                                   psdev_start_xmit + psdev_munge_pkt
+        v                                                    |
+ps_sone0_rx_handle_frame   <....fn-ptr....  klm_vdc          |  skb->dev = parent_dev; dev_queue_xmit
+(ASIC rx_handler)          (sets skb_       (VDC)            v
+        |                   protocol_get_inb)         ASIC netdevs (real)  [same leaba* devs]
+        |  redirect skb->dev + normalize;
+        |  netif_receive_skb
+        v
+ps-inb / ps-svc-inb (pseudo netdevs)
+        |
+        v
+psinb_rx_handle_frame (pseudo-dev rx_handler) ---handoff---+
+                                                           |
+mgmt netdev (IGB): mgmt_dev (mgmt0)                        |
+        |                                                  |
+        |  RX punt (all platforms)                         |
+        v                                                  |
+mgmt_rx_handle_frame (mgmt rx_handler) ---handoff----------+
+                                                           |
+                                                           v
+                                     klm_rni_lcnd: rni_handle_platform
+                                                           |
+                                                           v
+                                     klm_lcnd: lcnd_sone_inband_decap / _encap
+                                     (RX leaves klm_psdev here)
+
+Note: everything except the ASIC/mgmt netdevs and the External modules
+(klm_vdc, klm_rni_lcnd, klm_lcnd) lives inside the klm_psdev module.

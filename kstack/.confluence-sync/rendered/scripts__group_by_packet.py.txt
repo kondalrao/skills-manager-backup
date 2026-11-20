@@ -1,0 +1,632 @@
+> Auto-generated replica of `scripts/group_by_packet.py`. Edit the skill source (`~/.agents/skills/kstack/scripts/group_by_packet.py`), not this Confluence page. Changes appear on the next sync run.
+
+```python
+#!/usr/bin/env python3
+"""Group perf-decoded LCND traces on a per-packet basis.
+
+Capture (on a host with the lcnd_traces tracepoints, e.g. a switch LC/SUP) —
+METHOD-021 timed pattern:
+    run bash sudo sh -c "rm -f /bootflash/lcnd.perf /bootflash/lcnd_traces.txt; \
+      timeout <DUR> perf record -a -e 'lcnd_traces:*' -o /bootflash/lcnd.perf -- sleep <DUR>; \
+      perf script -i /bootflash/lcnd.perf > /bootflash/lcnd_traces.txt 2>&1"
+  Pull via `run bash sudo cat /bootflash/lcnd_traces.txt` or SSH redirect (METHOD-021).
+  <DUR> = capture seconds -- ASK the user, DEFAULT 10.
+
+Interpreting a query result: a query is an AND of all params. If the EXACT query
+  has 0 matches, the packet was NOT seen in the capture -- report that and STOP.
+  Do NOT re-query a subset and present a partial-match packet as if relevant.
+
+Input  : a `perf script` text dump of the `lcnd_traces` ftrace subsystem
+         (required positional argument), e.g. the /tmp/lcnd_traces_v2.log above.
+Output : the same lines re-grouped so that every trace event belonging to the
+         processing of ONE packet is emitted together as a block, with a
+         summary header per packet (default: <input>.grouped.log).
+Usage  : group_by_packet.py /tmp/lcnd_traces_v2.log
+         group_by_packet.py /tmp/lcnd_traces_v2.log -q "dir=in slp=0x4019"
+         group_by_packet.py --list-params
+
+Why a state machine and not "bucket by skb":
+  The LCND datapath (standalone/infra/kstack/kspace/lcnd/lcnd_n9k.c) processes
+  each punted packet as a single call chain, emitting an ordered burst of
+  tracepoints (defined in lcnd_trace.h, TRACE_SYSTEM lcnd_traces):
+
+    RX decap chain (lcnd_sone_inband_decap / lcnd_tah_inband_decap / ...):
+      lcnd_decap                <- ENTRY  ("Inside decap routine"), original skb
+      lcnd_decap_punt_hdr       <- header strip (carries NO skb field)
+      [platform decap events: vxlan_hdr, dot1q, subif, portchannel, ...]
+      lcnd_eth / lcnd_ip / lcnd_ip6            <- parse, original skb
+      lcnd_decap_eth_type_trans  OR
+      lcnd_decap_flow_mgr_entry + one _l2_swfwd/_filter_match/_exception/...
+      lcnd_skb_clone_kstack     <- CLONE: prints the skb_clone() nskb pointer
+      [lcnd_skb_clone_lldp/_lacp/_ctp]         <- CLONE: nskb pointer
+      lcnd_skb_pktmgr           <- back on the ORIGINAL skb (kim-data handoff)
+      lcnd_decap_stack          <- TERMINAL success, original skb
+      (or a *_drop event as a terminal, with no lcnd_decap_stack)
+
+    TX encap chain (lcnd_plat_encap), per egress/flood injection:
+      lcnd_eth [Out]            <- parse BEFORE the entry trace (see note)
+      lcnd_encap                <- ENTRY
+      lcnd_encap_xmit_attr
+      lcnd_encap_iftype
+      lcnd_encap_multicast      <- skb pointer SWITCHES here (rebuilt w/ headroom)
+      lcnd_eth [Out]            <- re-parse on the rebuilt skb
+      lcnd_encap_dot1q / lcnd_encap_inj_*_pkt_hdr
+      lcnd_encap_added_platform_headers        <- TERMINAL success
+      (or lcnd_encap_error / lcnd_encap_fdb_lookup_drop as a drop terminal)
+
+    Mgmt-inband path (lcnd_eth_type_trans_mgmt): mgmt_lcnd_decap_fwd /
+      mgmt_lcnd_decap_match fire once per mgmt packet and are self-contained
+      (NOT part of the lcnd_decap chain).
+
+  Three facts make a naive "group all lines with the same skb=" wrong:
+    (1) the original skb pointer is RECYCLED across later packets;
+    (2) the RX clone tracepoints print the clone's pointer, not the original's;
+    (3) the TX/encap path REBUILDS the skb mid-chain (platform headroom), so the
+        encap skb legitimately changes at lcnd_encap_multicast onward.
+  So we track an open group per CPU, opened by an ENTRY event, extended by the
+  chain members, and closed by a TERMINAL / a new ENTRY / EOF. The skb-equality
+  check is applied ONLY to RX groups (TX skb is expected to change). A parse line
+  that appears just BEFORE an entry (encap emits lcnd_eth before lcnd_encap) is
+  held in a per-CPU pending buffer and prepended to the group the entry opens.
+  Self-contained events each become their own single-line packet.
+"""
+
+import argparse
+import os
+import re
+import sys
+
+LINE_RE = re.compile(
+    r"^\s*(?P<comm>.*?)\s+(?P<pid>\d+)\s+\[(?P<cpu>\d+)\]\s+"
+    r"(?P<ts>\d+\.\d+):\s+lcnd_traces:(?P<event>[A-Za-z0-9_]+):\s?(?P<msg>.*)$"
+)
+SKB_RE = re.compile(r"skb\s*=\s*(0x[0-9a-fA-F]+)")
+IFACE_RE = re.compile(r"(?:ifname|interface|name)\s*=\s*([A-Za-z0-9/_.\-()]+)")
+
+# --- queryable fields --------------------------------------------------------
+# The same logical field is printed under different names / separators across
+# tracepoints (grounded in lcnd_trace.h TP_printk formats). Each canonical key
+# maps to the regex(es) that pull its value out of a trace message, so a query
+# on one canonical name matches ALL of its spellings.
+_NUM = r"(0x[0-9a-fA-F]+|\d+)"
+FIELD_PATTERNS = {
+    # --- common / shared across directions ---
+    "skb":         [r"skb\s*[=:]\s*(0x[0-9a-fA-F]+)"],
+    "intf":        [r"(?:ifname|interface|intf|name)\s*[=:]\s*([A-Za-z0-9/_.()\-]+)"],
+    "ifindex":     [r"(?:phy_ifindex|phy_ifidx|ifindex|ifidx)\s*[=:]\s*" + _NUM],
+    "lnx_ifindex": [r"lnx[ _]ifidx\s*:?\s*" + _NUM,
+                    r"lnx_ifindex\s*[=:]\s*" + _NUM],
+    "iod":         [r"(?:phy_iod|lc_iod|iod)\s*[=:]\s*(\d+)"],
+    "vlan":        [r"pm[ _]vlan\s*:?\s*(\d+)",
+                    r"vlan_id\s*[=:]\s*(\d+)",
+                    r"\bvlan\s*[=:]\s*(\d+)"],
+    "proto":       [r"skb->protocol\s*[=:]\s*([0-9a-fA-Fx]+)",
+                    r"pm_proto\s*[=:]?\s*" + _NUM,
+                    r"\bprotocol\s*[=:]\s*" + _NUM,
+                    r"\bproto(?!col)\s*:?\s*" + _NUM,
+                    r"ethtype\s*[=:]\s*" + _NUM,
+                    r"\betype\s*:?\s*" + _NUM],
+    "vni":         [r"\bvni\s*[=:]?\s*(\d+)"],
+    "sw_bd":       [r"\bsw_bd\s*[=:]?\s*(\d+)"],
+    "len":         [r"\blen\s*[=:]?\s*(\d+)"],
+    "flags":       [r"\bflags\s*[=:]\s*" + _NUM],
+    "smac":        [r"\bsmac\s*[=:]?\s*([0-9a-fA-F][0-9a-fA-F:.]+)"],
+    "dmac":        [r"\bdmac\s*[=:]?\s*([0-9a-fA-F][0-9a-fA-F:.]+)"],
+    "saddr":       [r"\bsaddr\s+([0-9A-Fa-f.:]+)"],
+    "daddr":       [r"\bdaddr\s+([0-9A-Fa-f.:]+)"],
+    # --- decap-only (SONE punt header, lcnd_decap_punt_hdr) ---
+    "relay_id":        [r"\brelay_id\s*:?\s*" + _NUM],
+    "slp":             [r"\bsource_lp\s*:?\s*" + _NUM],
+    "dlp":             [r"\bdestination_lp\s*:?\s*" + _NUM],
+    "ssp":             [r"\bsource_sp\s*:?\s*" + _NUM],
+    "dsp":             [r"\bdestination_sp\s*:?\s*" + _NUM],
+    "punt-code":       [r"\bcode\s*:?\s*" + _NUM],
+    "punt-source":     [r"\bsource(?!_)\s*:?\s*" + _NUM],
+    "fwd_header_type": [r"\bfwd_header_type\s*:?\s*" + _NUM],
+    # --- encap-only (inject platform header, lcnd_encap_inj_*_pkt_hdr) ---
+    "dmod":    [r"\bdmod\s*:?\s*" + _NUM],
+    "slot":    [r"\bslot\s*:?\s*" + _NUM],
+    "inst":    [r"\binst\s*:?\s*" + _NUM],
+    "dest":    [r"\bdest\s*:?\s*(\d+)"],
+    "qos":     [r"\bqos\s*:?\s*" + _NUM],
+    "phb_tc":  [r"\bphb_tc\s*:?\s*" + _NUM],
+    "l3_dlp":  [r"\bl3_dlp\s*:?\s*" + _NUM],
+    "down_nh": [r"\bdown_nh\s*:?\s*" + _NUM],
+}
+FIELD_PATTERNS = {k: [re.compile(p, re.IGNORECASE) for p in v]
+                  for k, v in FIELD_PATTERNS.items()}
+
+# Query-key spelling -> canonical field. Lets a user type any known alias.
+QUERY_ALIAS = {
+    "intf": "intf", "if": "intf", "ifname": "intf", "interface": "intf", "name": "intf",
+    "ifindex": "ifindex", "ifidx": "ifindex",
+    "phy_ifindex": "ifindex", "phy_ifidx": "ifindex",
+    "lnx_ifindex": "lnx_ifindex", "lnx_ifidx": "lnx_ifindex",
+    "iod": "iod", "phy_iod": "iod", "lc_iod": "iod",
+    "vlan": "vlan", "pm_vlan": "vlan", "vlan_id": "vlan",
+    "proto": "proto", "protocol": "proto", "pm_proto": "proto",
+    "ethtype": "proto", "etype": "proto",
+    "vni": "vni", "sw_bd": "sw_bd", "swbd": "sw_bd",
+    "len": "len", "flags": "flags",
+    "smac": "smac", "dmac": "dmac", "saddr": "saddr", "daddr": "daddr",
+    "skb": "skb", "cpu": "cpu", "comm": "comm", "pid": "pid",
+    # decap-only
+    "relay_id": "relay_id",
+    "slp": "slp", "source_lp": "slp",
+    "dlp": "dlp", "destination_lp": "dlp",
+    "ssp": "ssp", "source_sp": "ssp",
+    "dsp": "dsp", "destination_sp": "dsp",
+    "punt-code": "punt-code", "code": "punt-code",
+    "punt-source": "punt-source", "source": "punt-source",
+    "fwd_header_type": "fwd_header_type",
+    # encap-only
+    "dmod": "dmod", "slot": "slot", "inst": "inst", "dest": "dest",
+    "qos": "qos", "phb_tc": "phb_tc", "l3_dlp": "l3_dlp", "down_nh": "down_nh",
+}
+# Group-level keys handled specially (not per-line message fields).
+SPECIAL_KEYS = {"dir", "kind", "verdict", "event", "cpu", "comm", "pid"}
+
+# Which direction(s) each canonical field can meaningfully appear in. Used to
+# document params per direction (--list-params) and to warn on cross-dir queries.
+_ALL = ("in", "out", "mgmt")
+FIELD_DIRS = {
+    "skb": _ALL, "proto": _ALL, "smac": _ALL, "dmac": _ALL,
+    "intf": ("in", "out"), "ifindex": ("in", "out"), "lnx_ifindex": ("in", "out"),
+    "iod": ("in", "out"), "vlan": ("in", "out"), "vni": ("in", "out"),
+    "sw_bd": ("in", "out"), "len": ("in", "out"), "flags": ("in", "out"),
+    "saddr": ("in", "mgmt"), "daddr": ("in", "mgmt"),
+    "relay_id": ("in",), "slp": ("in",), "dlp": ("in",),
+    "ssp": ("in",), "dsp": ("in",), "punt-code": ("in",),
+    "punt-source": ("in",), "fwd_header_type": ("in",),
+    "dmod": ("out",), "slot": ("out",), "inst": ("out",), "dest": ("out",),
+    "qos": ("out",), "phb_tc": ("out",), "l3_dlp": ("out",), "down_nh": ("out",),
+    "cpu": _ALL, "comm": _ALL, "pid": _ALL,
+}
+
+
+def extract_fields(msg):
+    out = {}
+    for canon, pats in FIELD_PATTERNS.items():
+        for pat in pats:
+            for m in pat.finditer(msg):
+                val = m.group(1)
+                if val:
+                    out.setdefault(canon, set()).add(val)
+    return out
+
+
+def _to_int(s):
+    try:
+        return int(s, 16) if s.lower().startswith("0x") else int(s, 10)
+    except (ValueError, AttributeError):
+        return None
+
+
+def _norm_mac(s):
+    t = re.sub(r"[.:]", "", s).lower()
+    return t if re.fullmatch(r"[0-9a-f]{12}", t) else ""
+
+
+def value_eq(qv, fv):
+    """True if a query value equals a field value under sensible normalization
+    (case-insensitive text, numeric hex/dec equality, or MAC canonicalization)."""
+    if qv.casefold() == fv.casefold():
+        return True
+    a, b = _to_int(qv), _to_int(fv)
+    if a is not None and b is not None and a == b:
+        return True
+    mq = _norm_mac(qv)
+    return bool(mq) and mq == _norm_mac(fv)
+
+# --- event classification (grounded in lcnd_trace.h + lcnd_n9k.c call sites) ---
+ENTRY_RX = {"lcnd_decap"}
+ENTRY_TX = {"lcnd_encap"}
+TERMINAL_RX = {"lcnd_decap_stack", "lcnd_skb_exit"}
+TERMINAL_TX = {"lcnd_encap_added_platform_headers"}
+CLONE = {
+    "lcnd_skb_clone_kstack",
+    "lcnd_skb_clone_lldp",
+    "lcnd_skb_clone_lacp",
+    "lcnd_skb_clone_ctp",
+}
+# Self-contained, one-event-per-packet paths.
+STANDALONE_EXACT = {"mgmt_lcnd_decap_match", "mgmt_lcnd_decap_fwd"}
+# Non-datapath bookkeeping events -> treat each as its own record.
+STANDALONE_PREFIXES = (
+    "lcnd_fdb_",
+    "lcnd_pvlan_",
+    "lcnd_hash_",
+)
+STANDALONE_SUFFIXES = ("_error", "_generic_error", "_error_interface")
+
+
+def classify(event):
+    if event in ENTRY_RX:
+        return "entry_rx"
+    if event in ENTRY_TX:
+        return "entry_tx"
+    if event in TERMINAL_RX:
+        return "terminal_ok"
+    if event in TERMINAL_TX:
+        return "terminal_ok"
+    if event in CLONE:
+        return "clone"
+    if event.endswith("_drop") or event == "lcnd_encap_error":
+        return "terminal_drop"
+    if event in STANDALONE_EXACT:
+        return "standalone"
+    if event.startswith(STANDALONE_PREFIXES) or event.endswith(STANDALONE_SUFFIXES):
+        return "standalone"
+    # Everything else that is a decap/encap chain member (punt_hdr, vxlan_hdr,
+    # eth, ip, ip6, eth_type_trans*, flow_mgr_*, dot1q, subif, pktmgr, ...).
+    return "member"
+
+
+class Group:
+    __slots__ = (
+        "idx", "kind", "cpu", "skb", "records", "events",
+        "ifaces", "first_ts", "last_ts", "verdict", "fields",
+    )
+
+    def __init__(self, idx, kind, cpu, skb):
+        self.idx = idx
+        self.kind = kind
+        self.cpu = cpu
+        self.skb = skb
+        self.records = []
+        self.events = []
+        self.ifaces = []
+        self.first_ts = None
+        self.last_ts = None
+        self.verdict = "open"
+        self.fields = {}  # canonical field -> set(values), aggregated over lines
+
+    def add(self, rec):
+        self.records.append(rec)
+        self.events.append(rec["event"])
+        if self.first_ts is None:
+            self.first_ts = rec["ts"]
+        self.last_ts = rec["ts"]
+        iface = rec.get("iface")
+        if iface and iface not in self.ifaces:
+            self.ifaces.append(iface)
+        for k, vals in rec["fields"].items():
+            self.fields.setdefault(k, set()).update(vals)
+
+    def direction(self):
+        if self.kind == "TX-encap":
+            return "out"
+        if self.kind in ("MGMT-fwd", "MGMT-match"):
+            return "mgmt"
+        return "in"  # RX-decap / orphan
+
+    def matches(self, query):
+        """query: dict of canonical-key -> value (dir is mandatory)."""
+        if self.direction() != query["dir"]:
+            return False
+        for key, val in query.items():
+            if key == "dir":
+                continue
+            if key == "kind":
+                if val.casefold() not in self.kind.casefold():
+                    return False
+            elif key == "verdict":
+                if val.casefold() != self.verdict.casefold():
+                    return False
+            elif key == "event":
+                if not any(value_eq(val, e) or val.casefold() in e.casefold()
+                           for e in self.events):
+                    return False
+            else:  # message field (incl. cpu/comm/pid folded into fields)
+                vals = self.fields.get(key)
+                if not vals or not any(value_eq(val, x) for x in vals):
+                    return False
+        return True
+
+    def header(self):
+        span = self.first_ts if self.first_ts == self.last_ts else \
+            "%s->%s" % (self.first_ts, self.last_ts)
+        return (
+            "===== PKT %04d | %-9s | cpu=%s | skb=%s | if=%s | events=%d | "
+            "%s | verdict=%s ====="
+            % (
+                self.idx,
+                self.kind,
+                self.cpu,
+                self.skb or "-",
+                ",".join(self.ifaces) if self.ifaces else "-",
+                len(self.records),
+                span,
+                self.verdict,
+            )
+        )
+
+
+def parse_line(raw):
+    m = LINE_RE.match(raw)
+    if not m:
+        return None
+    d = m.groupdict()
+    skb_m = SKB_RE.search(raw)
+    iface_m = IFACE_RE.search(raw)
+    fields = extract_fields(d["msg"])
+    # Fold perf-header attributes into the field map so they are queryable too.
+    fields.setdefault("cpu", set()).add(d["cpu"])
+    fields.setdefault("comm", set()).add(d["comm"].strip())
+    fields.setdefault("pid", set()).add(d["pid"])
+    return {
+        "cpu": d["cpu"],
+        "comm": d["comm"].strip(),
+        "pid": d["pid"],
+        "ts": d["ts"],
+        "event": d["event"],
+        "msg": d["msg"],
+        "skb": skb_m.group(1).lower() if skb_m else None,
+        "iface": iface_m.group(1) if iface_m else None,
+        "fields": fields,
+        "raw": raw.rstrip("\n"),
+    }
+
+
+def group_records(records):
+    groups = []
+    open_by_cpu = {}
+    pending_by_cpu = {}  # leading members seen before their entry, per cpu
+    counter = [0]
+
+    def new_group(kind, cpu, skb):
+        counter[0] += 1
+        g = Group(counter[0], kind, cpu, skb)
+        groups.append(g)  # append at creation -> output stays in file order
+        return g
+
+    def close(cpu, verdict):
+        g = open_by_cpu.pop(cpu, None)
+        if g is not None and g.verdict == "open":
+            g.verdict = verdict
+
+    def flush_pending(cpu):
+        """Emit any buffered leading members that were never claimed by an entry
+        as a standalone orphan group (capture likely started mid-chain)."""
+        buf = pending_by_cpu.pop(cpu, None)
+        if not buf:
+            return
+        g = new_group("orphan", cpu, buf[0]["skb"])
+        for r in buf:
+            g.add(r)
+        g.verdict = "no-entry"
+
+    for rec in records:
+        cpu = rec["cpu"]
+        cls = classify(rec["event"])
+
+        if cls == "standalone":
+            flush_pending(cpu)
+            kind = "MGMT-fwd" if rec["event"].endswith("_fwd") else (
+                "MGMT-match" if rec["event"].endswith("_match") else "EVENT")
+            g = new_group(kind, cpu, rec["skb"])
+            g.add(rec)
+            g.verdict = "self-contained"
+            continue
+
+        if cls in ("entry_rx", "entry_tx"):
+            close(cpu, "no-terminal")
+            kind = "RX-decap" if cls == "entry_rx" else "TX-encap"
+            g = new_group(kind, cpu, rec["skb"])
+            # Prepend leading parse lines (encap emits lcnd_eth before lcnd_encap).
+            for r in pending_by_cpu.pop(cpu, []):
+                g.add(r)
+            g.add(rec)
+            g.skb = rec["skb"]  # anchor on the entry's skb, not the lead parse
+            open_by_cpu[cpu] = g
+            continue
+
+        # member / clone / terminal
+        g = open_by_cpu.get(cpu)
+
+        # RX-only skb consistency: a non-clone member whose skb differs from an
+        # open RX group means an address was recycled without a captured entry.
+        # (TX skb legitimately changes mid-chain, so never split TX on skb.)
+        if g is not None and g.kind.startswith("RX") and cls != "clone" \
+                and rec["skb"] and g.skb and rec["skb"] != g.skb:
+            close(cpu, "no-terminal")
+            g = None
+
+        if g is None:
+            # No open group: buffer members until an entry claims them; a terminal
+            # with no open group still closes the buffered chain as an orphan.
+            pending_by_cpu.setdefault(cpu, []).append(rec)
+            if cls in ("terminal_ok", "terminal_drop"):
+                buf = pending_by_cpu.pop(cpu)
+                og = new_group("orphan", cpu, buf[0]["skb"])
+                for r in buf:
+                    og.add(r)
+                og.verdict = "delivered" if cls == "terminal_ok" else "dropped"
+            continue
+
+        g.add(rec)
+        if cls == "terminal_ok":
+            close(cpu, "delivered")
+        elif cls == "terminal_drop":
+            close(cpu, "dropped")
+
+    for cpu in list(open_by_cpu):
+        close(cpu, "truncated")  # open at EOF -> chain cut off
+    for cpu in list(pending_by_cpu):
+        flush_pending(cpu)
+
+    return groups
+
+
+def _aliases_of(canon):
+    a = sorted(k for k, c in QUERY_ALIAS.items() if c == canon and k != canon)
+    return canon + (" (" + ", ".join(a) + ")" if a else "")
+
+
+def print_params(out=sys.stdout):
+    """Print the queryable params, grouped by the direction they apply to."""
+    common = [f for f in FIELD_DIRS if FIELD_DIRS[f] == _ALL
+              and f not in ("cpu", "comm", "pid")]
+    per = {"in": [], "out": [], "mgmt": []}
+    for f, dirs in FIELD_DIRS.items():
+        if dirs == _ALL or f in ("cpu", "comm", "pid"):
+            continue
+        for d in dirs:
+            per[d].append(f)
+
+    out.write("Query params (use as -q key=value; keys accept the aliases shown):\n")
+    out.write("\n  dir  (MANDATORY): in=decap | out=encap | mgmt=mgmt path\n")
+    out.write("\n  common to every direction:\n")
+    for f in ["kind", "verdict", "event", "cpu", "comm", "pid"] + sorted(common):
+        out.write("    - %s\n" % _aliases_of(f))
+    out.write("\n  dir=in  (decap RX; incl. SONE punt-header fields):\n")
+    for f in sorted(per["in"]):
+        out.write("    - %s\n" % _aliases_of(f))
+    out.write("\n  dir=out (encap TX; incl. inject platform-header fields):\n")
+    for f in sorted(per["out"]):
+        out.write("    - %s\n" % _aliases_of(f))
+    out.write("\n  dir=mgmt (mgmt-inband path):\n")
+    for f in sorted(per["mgmt"]):
+        out.write("    - %s\n" % _aliases_of(f))
+    out.write("\nValue matching: text is case-insensitive; hex==decimal "
+              "(proto=0x88cc == 35020); MACs match colon or dotted form.\n")
+    out.write("Multiple params are AND-combined. Example:\n")
+    out.write("  -q dir=out -q ifname=Eth1-27,proto=0x88cc\n")
+    out.write("  -q dir=in slp=0x4019 relay_id=1\n")
+
+
+def parse_query(query_args):
+    """Flatten repeatable/comma/space-separated `k=v` tokens into a canonical
+    query dict. `dir` is mandatory and must be in|out."""
+    query = {}
+    for chunk in query_args:
+        for tok in re.split(r"[,\s]+", chunk.strip()):
+            if not tok:
+                continue
+            if "=" not in tok:
+                sys.exit("error: bad query token %r (expected key=value)" % tok)
+            raw_key, val = tok.split("=", 1)
+            key = raw_key.strip().lower()
+            if key == "dir":
+                query["dir"] = val.strip().lower()
+            elif key in SPECIAL_KEYS:
+                query[key] = val.strip()
+            elif key in QUERY_ALIAS:
+                query[QUERY_ALIAS[key]] = val.strip()
+            else:
+                allowed = sorted(set(QUERY_ALIAS) | SPECIAL_KEYS | {"dir"})
+                sys.exit("error: unknown query key %r; allowed: %s"
+                         % (raw_key, ", ".join(allowed)))
+    if "dir" not in query:
+        sys.exit("error: query requires a mandatory 'dir' param: "
+                 "dir=in (decap) | dir=out (encap) | dir=mgmt (mgmt path)")
+    if query["dir"] not in ("in", "out", "mgmt"):
+        sys.exit("error: dir must be 'in' (decap), 'out' (encap), or 'mgmt', got %r"
+                 % query["dir"])
+    for key in query:
+        dirs = FIELD_DIRS.get(key)
+        if dirs and query["dir"] not in dirs:
+            sys.stderr.write(
+                "warning: param %r usually applies to dir=%s, not dir=%s "
+                "(will likely match nothing)\n"
+                % (key, "/".join(dirs), query["dir"]))
+    return query
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("input", nargs="?",
+                    help="perf-decoded lcnd_traces log (required unless --list-params)")
+    ap.add_argument("--list-params", action="store_true",
+                    help="print the queryable params grouped by direction, then exit")
+    ap.add_argument("-o", "--output", default=None,
+                    help="output grouped log "
+                         "(default: <input>.grouped.log, or <input>.<dir>.grouped.log "
+                         "when a query is given)")
+    ap.add_argument("-q", "--query", action="append", default=None, metavar="K=V",
+                    help="filter packets by query params (repeatable, or comma/space "
+                         "separated). 'dir' is MANDATORY: dir=in (decap) | dir=out "
+                         "(encap) | dir=mgmt (mgmt path). Other keys accept aliases, "
+                         "e.g. ifname/interface, "
+                         "ifindex/ifidx, iod/phy_iod, vlan/pm_vlan, proto/ethtype/etype, "
+                         "vni, smac, dmac, saddr, daddr, skb, cpu, kind, verdict, event. "
+                         "Example: -q dir=out -q ifname=Eth1-27,proto=0x88cc")
+    args = ap.parse_args(argv)
+
+    if args.list_params:
+        print_params()
+        return
+
+    if not args.input:
+        ap.error("input is required (or pass --list-params)")
+    if not os.path.isfile(args.input):
+        sys.exit("error: input not found: %s" % args.input)
+
+    query = parse_query(args.query) if args.query else None
+
+    if args.output:
+        out_path = args.output
+    elif query:
+        out_path = "%s.%s.grouped.log" % (
+            os.path.splitext(args.input)[0], query["dir"])
+    else:
+        out_path = os.path.splitext(args.input)[0] + ".grouped.log"
+
+    records = []
+    skipped = 0
+    with open(args.input, "r", errors="replace") as fh:
+        for raw in fh:
+            if not raw.strip():
+                continue
+            rec = parse_line(raw)
+            if rec is None:
+                skipped += 1
+                continue
+            records.append(rec)
+
+    # Grouping always runs over the WHOLE file (so groups are bounded correctly);
+    # a query only filters which groups are written. Packet numbers stay global.
+    all_groups = group_records(records)
+    groups = [g for g in all_groups if g.matches(query)] if query else all_groups
+
+    # Summary counts by kind and verdict (over the emitted groups).
+    by_kind = {}
+    by_verdict = {}
+    for g in groups:
+        by_kind[g.kind] = by_kind.get(g.kind, 0) + 1
+        by_verdict[g.verdict] = by_verdict.get(g.verdict, 0) + 1
+
+    with open(out_path, "w") as out:
+        out.write("# LCND per-packet grouping of %s\n" % os.path.basename(args.input))
+        if query:
+            out.write("# query: %s\n"
+                      % " ".join("%s=%s" % kv for kv in query.items()))
+            out.write("# matched %d of %d packets\n" % (len(groups), len(all_groups)))
+        out.write("# parsed events=%d  unparsed lines=%d  packets=%d\n"
+                  % (len(records), skipped, len(groups)))
+        out.write("# packets by kind: %s\n"
+                  % ", ".join("%s=%d" % kv for kv in sorted(by_kind.items())))
+        out.write("# packets by verdict: %s\n"
+                  % ", ".join("%s=%d" % kv for kv in sorted(by_verdict.items())))
+        out.write("#\n")
+        for g in groups:
+            out.write(g.header() + "\n")
+            for rec in g.records:
+                out.write(rec["raw"] + "\n")
+            out.write("\n")
+
+    if query:
+        print("query %s -> matched %d of %d packets -> %s"
+              % (" ".join("%s=%s" % kv for kv in query.items()),
+                 len(groups), len(all_groups), out_path))
+    else:
+        print("wrote %d packets (%d events, %d unparsed) -> %s"
+              % (len(groups), len(records), skipped, out_path))
+    print("by kind:    " + ", ".join("%s=%d" % kv for kv in sorted(by_kind.items())))
+    print("by verdict: " + ", ".join("%s=%d" % kv for kv in sorted(by_verdict.items())))
+
+
+if __name__ == "__main__":
+    main()
+```

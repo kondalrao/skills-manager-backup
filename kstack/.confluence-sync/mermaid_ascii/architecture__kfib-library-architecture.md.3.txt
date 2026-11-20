@@ -1,0 +1,35 @@
+KIM namespace event -> per-VRF netlink socket lifecycle
+
+  KIM emits MTS_OPC_KIM_NS_OPERATION (kim_ns_notif_t)
+    |
+    v
+  kfib_process_kim_update()
+    |
+    v
+  == kim_msg->operation? ===========================================
+    |                                        |
+    | KIM_NS_CREATE                          | KIM_NS_DELETE
+    v                                        v
+  kfib_nl_ns_add(ns_name)                  kfib_nl_ns_del(ns_name)
+    |                                        |
+    v                                        v
+  tsp_open(NETNS_RUN_DIR/ns_name)          find entry by ns_name
+    -> ns_fd                                 tsp_close(nl_sock)
+    |                                        LIST_REMOVE + KFIB_FREE
+    v                                        max_nl_socks--
+  setns(ns_fd, CLONE_NEWNET)   enter VRF netns
+    |
+    v
+  kfib_nl_create_sock()        socket created INSIDE the VRF netns
+    |
+    v
+  setns(default_ns_fd, CLONE_NEWNET)   return to default netns
+    |
+    v
+  table_id = l3vm_context_get_table_id(ns_name, IPV4, DEF_TABLE)
+    |
+    v
+  LIST_INSERT_HEAD(nl_sock_list); max_nl_socks++
+    |
+    v
+  next kfib_wait_for_ip_input() select() picks up the new fd

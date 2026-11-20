@@ -1,0 +1,36 @@
+Deep SONE chain: recycle-port GID programming (on LC_ONLINE)
+
+  MTS LC_ONLINE -> kim_process_lc_online
+        |
+        v
+  libutils_is_card_sone() && !SW_CARD_ID_IS_EOR_FM ?
+        |                                  |
+        | no                               | yes
+        v                                  v
+  skip (no recycle ports)      kim_process_recycle_ports(slot, sw_card_id)
+                                           |
+                                           v
+                    libpixm_sone_get_recycle_port_details(...)
+                                  [SDB read, out of dir]
+                                           |
+                                           v
+                    kim_fill_recycle_port_info():
+                      build lcnd_rcy_port_gid_t[]
+                        { mod, asic, slice, ifg, rcy_port_gid }
+                      + flood_recycle_port_gid
+                                           |
+                                           v
+                    kim_send_recycle_port_ioctl():
+                      lcinfo->code = LC_ND_RCY_PORT_GID_SET
+                      SIOCDEVMODLC on default_ns_sock
+                      ifr name kimctrl / kimctrl1 (container_id)
+                                           |
+                                           v
+                    LCND stores recycle-port GIDs (OUT OF SCOPE)
+
+Companion SONE paths:
+  mirror GID   : kim_program_mirror_gid() on LC_ONLINE (set) / LC_OFFLINE (clear)
+  MCT rsvd vlan: g_kim_vxlan_mct_rsvd_vlan @ INSEOR_VXLAN_MCT_ENCAP_VLAN_OFFSET
+                 -> kim_prgm_mct_rsvd_vlan()  (double-tag outer VLAN for MCT BUM)
+  rsvd vlan bmp: kim_process_rsvd_vlan(LC_ND_RSVD_VLAN_BMP /
+                 LC_ND_RSVD_PER_PORT_VLAN_BMP)

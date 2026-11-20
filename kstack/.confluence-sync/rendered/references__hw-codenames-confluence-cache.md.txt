@@ -1,0 +1,450 @@
+> Auto-generated replica of `references/hw-codenames-confluence-cache.md`. Edit the skill source (`~/.agents/skills/kstack/references/hw-codenames-confluence-cache.md`), not this Confluence page. Changes appear on the next sync run.
+
+<!-- LOCAL CACHE - Cisco Highly Confidential - do not share outside Cisco -->
+# CACHE: Confluence "Hardware codenames" (full page)
+
+This is a **local fallback cache** of the internal Confluence page, kept so KSTACK
+reasoning can continue if live access is lost. It is a verbatim snapshot; the live
+page is authoritative. **Refresh this file whenever the page is accessed** (see
+METHOD-016 / FLOW-006 cache-refresh protocol): update the metadata below and the
+body from the fetch, and note the new version.
+
+| field | value |
+|---|---|
+| source_url | https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/561414869/Hardware+codenames |
+| page_id | 561414869 |
+| title | Hardware codenames |
+| space_id | 561414144 |
+| page_version | 422 |
+| page_version_createdAt | 2026-05-25T10:23:43.247Z |
+| cached_at | 2026-07-08 |
+| cached_via | Atlassian MCP getConfluencePage (contentFormat=markdown) |
+| classification | Cisco Highly Confidential |
+
+---
+
+**Disclaimer: The information in this page is classified as Cisco Highly Confidential. Any information from this page extracted or shared outside of Cisco, is considered a policy violation.**
+
+The information in this page is intended only for Standalone Engineering team use. Access to the page is left open, as a goodwill gesture.
+
+# Useful links
+
+[N9k PID - ASIC, CPU, Phy, Retimer, Breakout details](https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/794795651)  
+
+N3k codenames at [ https://ciscoteams.atlassian.net/wiki/display/INSBUINDIA/N3K+Hardware+codenames](https://ciscoteams.atlassian.net/wiki/display/INSBUINDIA/N3K+Hardware+codenames)
+
+[Tahoe Family Asic Comparison](https://ciscoteams.atlassian.net/wiki/display/NEXUS9K/ASIC+comparison)
+
+[Jacksonville relesae End-of-Sale](https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/561449347)
+
+[http://wwwin-eng.cisco.com/Eng/IOSTech/CANA_WWW/cgi-bin/showmib.cgi?mib_type=CISCO-ENTITY-VENDORTYPE-OID-MIB.my9408PC-CFP2](http://wwwin-eng.cisco.com/Eng/IOSTech/CANA_WWW/cgi-bin/showmib.cgi?mib_type=CISCO-ENTITY-VENDORTYPE-OID-MIB.my)
+
+[SI Settings page ](https://wiki.cisco.com/display/insasic/SI+Settings+Release+Notes)
+
+[FPGA/EPLD (Internal only) Release Notes](http://wwwin-home.cisco.com/~pchow/FPGA/)
+
+[ToR FAN Power&Speed settings](https://apps.na.collabserv.com/wikis/home?lang=en-us#!/wiki/Wd1b7a1f2cb8a_4906_a163_6a83161ae1de)
+
+[N3K-N9K-N3500-Hardware-Inventory](https://ciscoteams.atlassian.net/wiki/spaces/INSBUINDIA/pages/550686803)
+
+# N9k code names ([ASIC Comparison](https://ciscoteams.atlassian.net/wiki/display/NEXUS9K/ASIC+comparison))
+
+The **troubleshooting legend** is at the bottom of the page, [here](https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/561414869/Hardware+codenames#tshoot_legend).
+
+| **Module Type** | **Model (**[**Taxanomy**](https://www.cisco.com/c/dam/en/us/td/docs/general/Illus_process/Test/html/images/501806.jpg)**)** | **Description** | **Code Name** | **HW Spec** | **FCS Version** | **EoS/EOL information** | **Last Supported Release**  | **Comments** | [**Troubleshooting Features **](https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/561414869/Hardware+codenames#tshoot_legend) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 36p 40G Ethernet Module | N9K-X9636PQ | T2 only card (3 x T2s) | Seymour | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/9dfd85f4-d671-428d-b658-d9f39988b3aa) | 6.1(2)I1(1) EOS in 10.1(1) | EoSWM = May 2018 EoVSS = May 2021 LDoS = May 2023 |  | last Supported branch = Irvine | P-, D, PT, ER, S |
+| Fabric Module | N9K-C9508-FM | FM, (8-slot) (2 x T2s) | Shasta | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/0ca41094-ba09-4365-ab36-54aa3e941a71) | 6.1(2)I1(1) EOS in 10.1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  |  |
+| Fabric Module | N9K-C9504-FM (armv7l) | FM, (4-slot) (1 x T2) | Mt. Rose | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/ea3d605a-beee-4f6d-99f1-e712c496e878) | 6.1(2)I2(1) EOS in 10.1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  |  |
+| Fabric Module | N9K-C9516-FM | FM, (16-slot) (4 x T2s) | Sierra | [HW spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/4530a3d2-a6f8-4251-8a60-8bba13f5471a) | 6.1(2)I2(2a) EOS in 10.1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  |  |
+| Supervisor Module | N9K-SUP-A |  | Kirkwood | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/62bffdc9-ff9d-4187-95d7-b6fc84a5b9c3) | 6.1(2)I1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  |  |
+| Supervisor Module | N9K-SUP-B |  | Keystone |  | 6.1(2)I3(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  |  |
+| Supervisor Module | N9K-SUP-A+ | Intel Broadwell CPU | Zion-A |  | Target: G |  |  |  |  |
+| Supervisor Module | N9K-SUP-B+ | Intel Broadwell CPU | Zion-B |  | Target: G |  |  |  |  |
+| Supervisor Module |  | Supervisor module for next gen Lynchburg Chassis | Vesper |  |  |  |  |  |  |
+| System Controller | N9K-SC-A |  | Alta | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/d236d5be-5123-45cc-b9a7-cce0e92528b1) | 6.1(2)I1(1) |  |  |  |  |
+| 48x1/10G + 4x40G Ethernet Module | N9K-X9564PX | 2 x T2 + 2 NS (Northstar) | Blackcomb | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/8f9d5e99-71ba-4bb6-96da-bea462720955) | 6.1(2)I2(1) EOS in 10.1(1) | EoSWM = May 2018 EoVSS = May 2021 LDoS = May 2023 |  |  | P-, INE\*, EGE\*, D, PT, ER, S |
+| 48x1/10G base-T + 4x40G Ethernet Module | N9K-X9564TX | 2 x T2 + 2 NS (Northstar) | Cypress | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/148449df-1b0a-423d-86cc-0d6d7490fade) | 6.1(2)I2(1) EOS in 10.1(1) | EoSWM = May 2018 EoVSS = May 2021 LDoS = May 2023 |  |  | P-, INE\*, EGE\*, D, PT, ER, S |
+| 36p 40G Ethernet Module | N9K-X9536PQ | 3:2 oversubscribed  (2 x T2 + 2 x NS (Northstar)) | Moena | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/203cc423-33ff-47dc-ab27-f2bd0417602e) | 6.1(2)I2(2a) EOS in 10.1(1) | EoSWM = Feb 2018 EoVSS = Feb 2021 LDoS = Feb 2023 |  |  | P-, INE\*, EGE\*, D, PT, ER, S |
+| 12x40G Ethernet Expansion Module | N9K-M12PQ | 1 x NS based GEM | Miller |  | 6.1(2)I2(1) EOS in 10.1(1) | EoSWM = May 2018 EoVSS = May 2020 LDoS = Apr 2022 |  |  |  |
+| 96x1/10G base-T Ethernet Module | N9K-C93128TX | 1 x T2 + GEM (N9K-M12PQ or N9K-M6PQ) TOR | Nagano | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/57b33263-33ce-4796-8f00-52266e5668d1) | 6.1(2)I2(1) EOS in 10.1(1) | EoSWM = Oct 2017 EoVSS = Apr 2020 LDoS = Oct 2022 |  |  | P+, INE\*, EGE\*, D, PT, ER, S |
+| 48x1/10G Ethernet Module | N9K-C9396PX | 1 x T2 + GEM (N9K-M12PQ or N9K-M6PQ) TOR | Lake Placid | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/726a4b9f-e96f-469d-abbf-24947faa09ef) | 6.1(2)I2(1) EOS in 10.1(1) | EoSWM = May 2018 EoVSS = Aug 2020 LDoS = Apr 2022 |  |  | P+, INE\*, EGE\*, D, PT, ER, S |
+| 48x1/10G base-T Ethernet Module | N9K-C9396TX | 1 x T2 + GEM (N9K-M12PQ or N9K-M6PQ) TOR | Sochi | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/a4972dad-80ed-4964-828d-5ed5a0393de7) | 6.1(2)I3(1) EOS in 10.1(1) | EoSWM = Jan 2018 EoVSS = Apr 2020 LDoS = Apr 2022 |  |  | P+, INE\*, EGE\*, D, PT, ER, S |
+| 64p 40G Ethernet Switch | N3K-C3164Q-40GE | 6 x T2 | Redmond2 | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/a8368c40-cc72-4395-8f3d-297864d8b404) | 6.1(2)I2(2b) | EoSWM =TBD EoVSS = TBD LDoS = Oct 2024 |  |  |  |
+|  | N9K-M6PQ | Donner based QSFP x 6 GEM | Coors | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/469df962-f4df-4302-aea2-91ae649982b6) | ??? | EoSWM = Mar 2017 EoVSS = Sep 2020 LDoS = Feb 2022 |  |  |  |
+|  | N9K-M6PQ-E | Donner rev-C  based QSFP x 6 GEM | Coors+ |  | 7.0(3)I2(1) EOS in 10.1(1) | EoSWM = May 2018 EoVSS = Aug 2021 LDoS = Apr 2023 |  |  |  |
+|  | N9K-C9372PX | TOR, 1 RU, 48F + 6Q (T2 + Donner. No Gem) | Oslo | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/846176d4-2cda-460b-b63c-542b93c41c38) | 6.1(2)I3(1) EOS in 10.1(1) | EoSWM = Feb 2018 EoVSS = Aug 2020 LDoS = Feb 2022 |  |  | P+, INE\*, EGE\*, D, PT, ER, S |
+|  | N9K-C9372PX-E | TOR, 1 RU, 48F + 6Q (T2 + Donner-revC. No Gem) | Oslo+ |  | 7.0(3)I2(1) EOS in 10.1(1) | EoSWM = Nov 2018 EoVSS = May 2021 LDoS = Nov 2023 |  |   
+sanity09 | P+, INE\*, EGE\*, D, PT, ER, S |
+|  | N9K-C9372TX | TOR, 1 RU, 48T+6Q (T2+Donner. No Gem) | Sapporo | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/ca8a07af-5c6e-41c9-acf1-8955ea42ed4a) | 6.1(2)I3(1) EOS in 10.1(1) | EoSWM = Feb 2018 EoVSS = Aug 2020 LDoS = Feb 2022 |  |  | P+, INE\*, EGE\*, D, PT, ER, S |
+|  | N9K-C9372TX-E | TOR, 1 RU, 48T+6Q (T2+Donner-revC. No Gem) | Sapporo+ |  | 7.0(3)I3(1) EOS in 10.1(1) | EoSWM = Nov 2018 EoVSS = Jun 2021 LDoS = Nov 2023 |  |  | P+, INE\*, EGE\*, D, PT, ER, S |
+|  | N9K-C9332PQ | TOR, 1 RU, 26Q+6Q (T2+Donner. No Gem) | Calgary | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/8e89d807-14f2-4138-9877-aa7dfa5c835b) | 6.1(2)I3(1) EOS in 10.1(1) | EoSWM = Feb 2019 EoVSS = Aug 2023 LDoS = Feb 2025 |  |  | P+, INE\*, EGE\*, D, PT, ER, S |
+|  | N9K-X9408PC-CFP2 | LC, 8 x 100 G (2 \* T2) | Apache | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/dd21ecea-770e-4813-8414-c05a277f92a2) | 7.0(3)I1(2) EOS in 10.1(1) | EoSWM = Aug 2017 EoVSS = Aug 2020 LDoS = Aug 2022 |  |  | **?P**, D, PT, ER, S |
+|  | N9K-M4PC-CFP2 | GEM, 4 x 100 G (4 \* gearbox, 4 \* Ranger plus) | Moonshot | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/7caf1620-002b-4dd2-a7ff-9ad6914da4dd) | 7.0(3)I1(2) EOS in 10.1(1) | EoSWM = Mar 2017 EoVSS = Sep 2019 LDoS = Feb 2021 |  |  |  |
+| 32x40/100G QSFP28 2x10G SFP+ Ethernet | N3K-C3232C | TOR, 32 x 100 G (1 x BCOM Tomahawk) | Havasu | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/269e4844-3d2f-4e62-868a-635c7cac0496) | 7.0(3)I3(1) | EoSWM = Aug 2023 EoVSS = Aug 2025 LDoS = Aug 2027 |  |  | **8GB RAM** |
+| 96x10G Baset + 6x40G QSFP donner | N9K-C93120TX | TOR , 2 RU (T2) | Squaw valley | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/1fafb568-2189-46eb-969c-04da9f3eb1e8) | 7.0(3)I1(2) EOS in 10.1(1) | EoSWM = Feb 2020 EoVSS = Aug 2023 LDoS = Feb 2025 |  |  |  |
+| 32x40G QSFP | N9K-X9432PQ | 2 x T2 32p 40G (connected to 4 FM) | Sunridge | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/32e24643-4184-4bf1-98a7-e11c354290c2) | 6.1(2)I2(2a) EOS in 10.1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  | P-, D, PT, ER, S |
+| 48x1G/10G pluggable SFP + 4x40G | N9K-X9464PX | 1 x T2 48F+4Q (connected to 4 FM) | Honeycomb | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/6aa2df54-ec80-4913-b1b8-9a1678b68533) | 6.1(2)I2(2a) EOS in 10.1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  | P-, D, PT, ER, S |
+| 48x100M/1G/10G base-T + 4x40G | N9K-X9464TX | 1 x T2 48T+4Q (connected to 4 FM) | Chicopee | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/0d4d1d6f-811c-47bd-9daf-5a4bd67a963c) | 6.1(2)I2(2a) EOS in 10.1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  | P-, D, PT, ER, S |
+|  | N9K-X9464TX2 | 1 x T2 48T+4Q (connected to 4 FM). 84858Phy | ChicopeeCR |  | 7.0(3)I3(1) EOS in 10.1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  |  | P-, INE\*, EGE\*, D, PT, ER, S |
+|  | N3K-C31128PQ | 96F+8Q Pure T2 | Stockholm | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/b9e0ba06-d343-452f-9fc9-47fd0535538f) | 7.0(3)I2(1) EOS in 10.1(1) | EoSWM = Jan 2023 EoVSS = Feb 2025 LDoS = Feb  2027 |  |  |  |
+| TOR, 64PQ, Lacrosse | N9K-C9264PQ | TOR, 2 RU, Lacrosse - Tahoe -  not shipping | Grenoble | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/80d2c53d-8ba1-41d0-ae08-1d69d9b2a0f4) | TEST BOARD |  |  |  |  |
+| TOR, 72Q, Lacrosse | N9K-C9272Q | TOR, 2 RU, 72Q, Lacrosse - Tahoe | Chamonix | [HW Spec](http://wwwin-eng.cisco.com/Eng/INSBU/Hardware/TOR_HW/Chamonix/chamonix_hw_func_spec.docx) | 7.0(3)I3(1) EOS in 10.1(1) | EoSWM= sep 2021 EoVSS = sep 2025 LDOS =sep 2025 |  | sanity59 & sanity63 testbeds Sesto(Gerabox) - BCM82328 | P-, INE, S2S, ER, S |
+| TOR, 48x10G+6Q/4C, Davos | N9K-C92160YC-X | TOR, 1 RU, 48 x 10G + 6Q/4C, Davos ASIC | Deer valley | [HW Spec](http://wwwin-eng.cisco.com/Eng/INSBU/Hardware/TOR_HW/Deer_Valley/deer_valley_hw_func_spec.doc) | 7.0(3)I3(1) EOS in 10.1(1) | EoSWM = Mar 2021 EoVSS = Mar 2024 LDoS = Mar 2026 |  | sanity58 testbed   
+  
+~~N9K-C92160YC~~   
+ ~~N9K-C9288PC~~   
+ ~~N9K-C9288PX~~ ~~N9K-C9296PX~~ | P-, INE, S2S, ER, S |
+| TOR, 48x10G+6Q/4C, Davos | N9K-C9256PV | Test line card for Deer Valley -  not shipping   
+48 x 10/25G + 4 x 40G + 2 x 100 G Ethernet | Salt lake City |  | TEST BOARD |  |  |  |  |
+| TOR, 36Q/C, Lacrosse | N9K-C9236C |  | St. Moritz | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/df0a8037-7e25-4a9a-a980-9d61f5558320) | 7.0(3)I4(1) EOS in 10.1(1) | EoSWM = Feb 2020 EoVSS = Feb 2023 LDoS = Feb 2025 |  | ~~N9K-C9236PC~~ Ports 1 to 8 and 29 to 36 have Furia retimer-**BCM82381** | P-, INE, S2S, ER, S |
+| TOR, 48x25G SFP +18x100G, Lacrosse | N9K-C92300YC | Broadwell-DE SKU: D1517 4C, 25W, 1.6 GHz 24 GB of RAM 2 MB of NVRAM   
+      (1 x NVRAM chip) 64GB SSD (bootflash) | West Lake | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/f09aa8b7-ed88-4a9b-bb2d-a2963cd5a975) | 7.0(3)I6(1) EOS in 10.1(1) | EoSWM = Feb 2020 EoVSS = Feb 2023 LDoS = Feb 2025 |  | Furia retimer-**BCM82381** | P-, INE, S2S, ER, S |
+| ~~TOR, 36C with 16 MacSec~~ |  | ~~Lacrosse 1.2 + Bear Valley~~ | ~~Mackeson~~ |  |  |  |  |  |  |
+| Tomahawk Fabric | N9K-C9508-FM-S | 8 slot FM(2 x TH - without retimers) | Sugarloaf+ |  | 7.0(3)I3(1) EOS in 10.1(1) | TBD |  |  |  |
+| Tomahawk Fabric | N9K-C9508-FM2 | 8 slot FM(2 x TH - with retimers) | Sugarloaf | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/57a78f29-6da8-4b84-b17a-4d159dab48a2) | EOS in 10.1(1) | TBD |  |  |  |
+|  | N9K-C9504-FM-S | 4-slot FM (1 x TH) | Mt. Baldy | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/22680a7e-8b83-4a2e-979d-58a4e9787a28) | 7.0(3)I4(1) EOS in 10.1(1) | TBD |  |  |  |
+| Tomahawk 32x100 QSFP28 | N9K-X9632PC-QSFP100 | 2 x TH 32p 100/40G (connected to 4 FM) | Montage | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/5ff21855-09f8-4242-b5f9-f986571a660f) | EOS in 10.1(1) | TBD |  |   
+sanity55 & sanity62 testbed | **?P**, D, PT, ER, S |
+| Tomahawk 32x100 QSFP28 | N9K-X9432C-S | 2 x TH 32p 100/40G (connected to 4 FM) | Montage+ |  | 7.0(3)I3(1) EOS in 10.1(1) | TBD |  |  | **?P**, D, PT, ER, S |
+| Sugarbowl 48Fx10/25 +  6C | N9K-C93180YC-EX | TOR, 48F x 10/25, 4C, 1 Sugarbowl 1.1 Intel® Xeon® Processor E3-1105C v2 8M Cache,1.80 GHz) | Seoul | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/b31b4b99-e76b-4be6-be39-717e8c799695) | 7.0(3)I4(2) EOS in 10.4(1) Supported via  platform.inf until 10.4(3) by adding following lines \[installer\]  
+disable_card_check=1  
+allow_eos_pids=1 |  |  | ~~N9K-C93160YC~~  ~~N9K-93180YC-EX~~ Furia retimer-**BCM82381:** ports 51-54 | P-, INE, S2S, ER, S |
+| Sugarbowl ToR | N9K-C93180YC-EXU | TOR, 48F x 10/25, 4C, 1 Sugarbowl 1.2 | Seoul UP |  | EOS in 10.4(1) |  |  | Furia retimer-**BCM82381** |  |
+| Sugarbowl ToR | N9K-C93180YC-EX-24 | TOR, 24 x 10/25G + 6 x 40/100G Ethernet Module | Seoul_24 |  | I-MR1 EOS in 10.4(1) |  |  |  |  |
+| 1 Lacrosse FM4 | N9K-C9504-FM-E | 4-slot FM, 1 x Lacrosse | Mt. Kato | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/8545611f-e3ed-4527-807b-04ccc247b33d) | 7.0(3)I4(2) |  |  | [Port Map](http://wikicentral.cisco.com/pages/viewpageattachments.action?pageId=529555665)  | 800Gbps per slot and total maximum of 3.2T |
+| 2 Lacrosse FM8 | N9K-C9508-FM-E (X86_64 Atom) | FM, (8-slot) | Shawnee | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/167b6b64-cda6-4017-9811-05977877db76) | 7.0(3)I4(2) |  |  | [Port Map](http://wikicentral.cisco.com/pages/viewpageattachments.action?pageId=529555665) |  |
+| 4 Lacrosse FM16 | N9K-C9516-FM-E | 16-slot FM, 4 x Lacrosse | Mammoth | [HW spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/cb55b72c-a256-463d-b63c-c8ff305c67c6) | 7.0(3)I5(2)\* 7.0(3)I6(1) EOS in 10.1(1) | EoSWM = Nov 2020 EoVSS = Nov 2023 LDoS = Nov 2025 |  | \*only for select customers Furia retimer-**BCM82381** |  |
+| Sugarbowl LC | N9K-X9736C-EX | 36C, 4 x Sugarbowl LC | Cascades | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/bc4e8c48-11b2-4c06-9820-ae17e0b8e981) | 7.0(3)I6(1) EOS plan for 10.5(1) |  |  |  | P-, INE, S2S, ER, S |
+| Lacrosse LC | N9K-X9736C-E | 2 x Lac LC 36Q/C - not productized | Canyons | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/1cb07224-5bf8-49c9-9418-cafe67ad696a) | TEST BOARD |  |  | [Port Map](http://wikicentral.cisco.com/pages/viewpageattachments.action?pageId=529555665) |  |
+| Tomahawk TOR 64x40G | N3K-C3264Q-S | 64 x 40G + 2 x 10G SFP+ Ethernet Module | Nanook | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/559671f8-2d7b-4789-86e3-6781c540af8d) | 7.0(3)I3(1) |  |  | sanity52 testbed | **8GB RAM** **supports secure boot** |
+| Sugarbowl TOR base-T | N9K-C93108TC-EX | TOR, 48 x 10/25GBASE-T + 6 x 100G | Turin | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/8c01eb41-90a3-469a-8323-fd3ebc4b7d6a) | 7.0(3)I4(2) EOS in 10.4(1) Supported via  platform.inf until 10.4(3) by adding following lines \[installer\]  
+disable_card_check=1  
+allow_eos_pids=1 |  |  |  | P-, INE, S2S, ER, S |
+|  | N9K-C93108TC-EX-24 | TOR, 24 x 10GBASE-T + 6 x 40 G/100G Ethernet Module | Turin_24 |  | I-MR1 EOS in 10.4(1) |  |  |  |  |
+| Lacrosse TOR | N9K-C92304QC | TOR, 8 x 100G, 56 x 40G, 2 x 100M Lacrosse | Bellevue | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/383feff3-683a-4613-bf3c-1ca6d42c4346) | 7.0(3)I4(1) EOS in 10.1(1) | EoSWM = Aug 2019 EoVSS = Aug 2022 LDoS = Aug 2024 |  | [sprom](http://wikicentral.cisco.com/display/INSBUHW/Bellevue) sanity56 | P-, INE, S2S, ER, S |
+| Lacrosse TOR | N9K-C9232C | TOR, 1 x LAC 32C | Kingsgate | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/8c5fb363-61ff-49b4-a2e4-b936902fce07) | 7.0(3)I4(2) |  |  | [sprom](http://wwwin-eng.cisco.com/Eng/INSBU/Hardware/TOR_HW/Kingsgate/kingsgate_sprom_table.xlsx) \*only for select customers (MSFT) For supported features/xcvr info cross reference with St. Mortiz (N9K-C9236C) Ports 1 to 6 and 27 to 32 have Furia retimer-**BCM82381** | P-, INE, S2S, ER, S |
+| Lacrosse TOR | N9K-C92300YC | TOR, 48T + 18C Lacrosse | West Lake | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/f09aa8b7-ed88-4a9b-bb2d-a2963cd5a975) | 7.0(3)I6(1) | EoSWM = Feb 2020 EoVSS = Feb 2023 LDoS = Feb 2025 |  | Furia retimer ports: ports 1-24. |  |
+| Sugarbowl LC | N9K-X9732C-EX(X86_64 Atom) | LC, 32C, 4 x Sugarbowl  | Tacoma | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/6e12789a-7ed7-4dec-ab37-a4b6267642c5) | 7.0(3)I4(2) EOS plan for 10.5(1) |  |  |  | P-, INE, S2S, ER, S |
+| Sugarbowl LC | N9K-X9732C-EXM | LC, 32C, 4 x Sugarbowl + Macsec (with 16 BRCM chips) | ƒse ?? Redwood | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/44130b56-9321-42bb-b6c9-a82a21f1c37c) | 7.0(3)I4(6) EOS plan for 10.5(1) |  |  | \* only for some customers All Front ports 1 to 32 have Evora chip - **BCM82392** |  |
+| Sugarbowl LC | N9K-X97160YC-EX | LC, 48 x 1/10/25G, 4 x 40G/100G, 2 x Sugarbowl | Silvercreek | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/657bb610-65ae-4b67-a14e-c90ab6878148) | 7.0(3)I5(2) |  |  |  | P-, INE, S2S, ER, S |
+| Sugarbowl TOR | N9K-C93180LC-EX | TOR, 28Fx40G, 4C up, 1 Sugarbowl 1.2 Intel(R) Xeon(R) CPU D-1526 @ 1.80GHz, 4-Core, 6M Cache | Fosters | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/7ec590c5-9e13-4887-8f50-8d6f43908577) | 7.0(3)I6(1) EOS in 10.1(1) |  |  |  | P-, INE, S2S, ER, S |
+| Homewood LC | N9K-X9736C-FX(X86_64 Atom) | LC, 36C - 4 x Homewood + Bearvalley (Macsec by Homewood), 5 FMs | Bluewood | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/fd56ec73-6a60-48d8-9124-5be63d1049cb) | G MR1 with 5FM on 4/8/16 slotters  |  |  | connects to 5 FM | P-, INE, S2S, ER, S |
+| Homewood LC | N9K-X9736Q-FX | LC, 36Q - 4 Homewood, Bearvalley, 5 FMs | Bluewood 40G |  | 7.0(3)I7(6) |  |  |  |  |
+| Homewood LC | N9K-X9788TC-FX | LC, 48 x 10GT + 4C, 2 Homewood | CopperCreek | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/1d0992de-37f4-4d8c-bb46-6e3efc5449da) | Gplus I7(3) |  |  |  | P-, INE, S2S, ER, S |
+| Homewood LC | N9K-X9788TC2-FX | LC, 48 x 10GT + 4C, 2 Homewood | CopperCreek BMA |  | I+ |  |  | Replace BCM phy to AQ phy |  |
+| Homewood LC | N9K-X97284YC-FX | LC, 48 x 25G, 4C, 2xHomewood | Eldora |  |  |  |  |  | P-, INE, S2S, ER, S |
+| Homewood TOR | N9K-C93180YC-FX | TOR, 48 x 10/25G + 6C, Homewood | Sumpin | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/ecc233f2-4a65-4806-af7d-d974eb835d1c) | 7.0(3)I7(1) |  | No support in 10.7.x | Furia retimer-**BCM82381** FCOE enabled N9K | P-, INE, S2S, ER, S |
+| Homewood TOR | N9K-C93180YC2-FX | TOR, 48 x 10/25G + 6C, Homewood | Sumpin BMA | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/ecc233f2-4a65-4806-af7d-d974eb835d1c) | I+ |  | No support in 10.7.x |   
+Replace Furia with BearValley | P-, INE, S2S, ER, S |
+| Homewood TOR | N9K-C93180YC-FX-24 | TOR, 24 x 10/25G/32G + 6 x 40/100G Ethernet/FC Module | Sumpin_24 |  | I-MR1 |  | No support in 10.7.x |  |  |
+| Homewood TOR | N9K-C93108TC-FX | TOR, 48 x 10G Copper + 6C, Homewood | Shugga | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/425f2adf-407d-4ad2-9730-99fbf8eb68a1) | 7.0(3)I7(1) |  | No support in 10.7.x |  | P-, INE, S2S, ER, S |
+| Homewood TOR | N9K-C93108TC2-FX | TOR, 48 x 10G Copper + 6C, Homewood | Shugga BMA |  | I+ |  | No support in 10.7.x | Replace BCM phy to AQ phy |  |
+| Homewood TOR | N9K-C93108TC-FX-24 | TOR, 24 x 1/10GT + 6 x 40G/100G Ethernet Module | Shugga_24 |  | I-MR1 |  | No support in 10.7.x |  |  |
+| Homewood TOR | N9K-C9348GC-F | TOR, PoE+ 40 x 100/1G + 8 x MGig + 4 SFP + 2Q, HomeWood | Pipeworks (On Hold) | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/8dd6897e-4ad1-4d9c-b07c-a453cf2aab1e) |  |  |  |  |  |
+| Homewood TOR | N9K-C9348GC-FXP | TOR, PoE+ 48 x 100/1G + 4 SFP + 2Q, HomeWood | PipeDream | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/7c097ae9-8629-4bbb-b3f6-e672d871b3e2) | 7.0(3)I7(1) |  |  |  | P-, INE, S2S, ER, S |
+| Homewood TOR | N9K-C9348GC2-FXP | TOR, PoE+ 48 x 100/1G + 4 SFP + 2Q, HomeWood | PipeDream BMA |  | I+ |  |  | Replace Broadcom PHY with Marvell PHY |  |
+| Homewood TOR | N9K-C9358GY-FXP | TOR, PoE+, 8 x 100/1000M + 2 x 10G/25G SFP | Graceland | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/10853b69-a664-4d1d-a590-ee7e2633d71d) | IplusA 9.3(3) |  |  | Leverage Pipedream design. Broadwell-DE/16GB of RAM  |  |
+| Homewood LC | N9K-X9732C-FX | LC, 32C - 4 x Homewood, 40 iEthlinks for redundant FM support | RedLake | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/5228360f-b13b-402a-bd68-73b106d38950) [IOFPGA Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-11668078&ver=latest) | GPLUS |  |  | connects to 5 FM | P-, INE, S2S, ER, S |
+| BigSky TOR | N9K-C9364C | TOR, 64C 1 x BigSky | Doppelbock | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/18302021-7e88-4e09-9985-fa4503f85a41) | G MR1 7.0(3)I7(2) | EoS Jan 2025 EoVSS Jan 2029 LDOS Jan 2029 | 10.5 (p-train) last supported not support in 10.6 |  | P-, INE, S2S, ER, S |
+| BigSky FM | N9K-C9508-FM-E2 | FM, (8-slot), 1 x BigSky | Mt. Baker |  |  Hamilton 9.2(1) |  |  |  |  |
+| BigSky FM | N9K-C9516-FM-E2 | FM, (16-slot), 2 x BigSky | Mt. Everest |  | GPlus I7(3) |  |  | Furia retimer-**BCM82381** |  |
+| BigSky TOR | N9K-C9332C | TOR, 32C 1 x BigSky | Maibock | [HW spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/77d99792-faf7-4bc9-80b3-c80f5931574f) | Post H 15.1 | EoS Jan 2025 EoVSS Jan 2029 LDOS Jan 2029 | 10.5 (p-train) last supported not support in 10.6 |  | P-, INE, S2S, ER, S |
+| Heavenly TOR | N9K-C9336C-FX2 | TOR, 36 x 100G | Scrimshaw | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/af45a632-4553-434d-ae89-f73d5a3dde05) | GPlus I7(3) |  |  | BV retimer ports: 1-6 and 33-36. HW Changes Bits=0x1 for P3 shipping boards. |  |
+| Heavenly TOR | N9K-C93240YC-FX2 | TOR, 48 x 10/25G SFP+ & 12 x 40/100G | South Lake2 | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/d0e075ae-3821-4d89-bd1c-9768dbbc09d7) | GPlus I7(3) |  |  | P-, INE, S2S, ER, S  
+P3(shipping board) - BV retimer ports : 51-54. P1/P2 boards - BV retimer ports: 58-66. HW Changes Bits=0x2 for P3 shipping boards. |  |
+| Heavenly TOR | N9K-C93300YC-FX2 |  | South Lake |  |  |  |  |  |  |
+| Heavenly TOR | N9K-C93240YC-FX2-Z | TOR, 48 x 10/25G SFP+ & 12 x 40/100G without FAN + Alibaba PS | Deep Lake |  | H 15.1 |  |  | P3(shipping board) - BV retimer ports : 51-54. P2 board - BV retimer ports: 58-60. |  |
+| Heavenly TOR | N9K-C93360YC-FX2 | TOR, 96 x 10/25G SFP+ & 12 x 40/100G | St Archer (2 RU) | [HW Specs](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/57afd4c6-0aad-4b84-8e49-8d16570be77d) | I |  |  | QSFP port 97-108: All BV retimer ports | P-, INE, S2S, ER, S |
+| Heavenly TOR | N9K-C93216TC-FX2 | TOR, 96 x 1/10GT + 12 x 40/100G | Tucher (2 RU) | [HW Specs](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/48b4e46f-1b82-47e2-b6d6-a43240940fcf) | I |  |  | QSFP port 97-108: All BV retimer ports | P-, INE, S2S, ER, S |
+| Heavenly TOR | N9K-C9336C-FX2-E | TOR, 36 x 40/100G (QSFP28). Fibre Channel support is added. Scrimshaw replacement | Steller  | [EDCS-19447867](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-19447867) | J |  |  | BV retimer ports: 1-8 | P-, INE, S2S, ER, S |
+| Homewood TOR | N9K-C92348GC-X | TOR. 48 x 100M/1 GBASE-T + 4 x 10/25G SPF28 + 2 x 40/100 G QSFP28 | Thurn | [HW Specs](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/759adc7c-5d6c-49c1-a3cc-6dbf9e78131c) | I | EoVSS July 2030; LDOS - July 2030 | 10.5 (p-train) last supported no support in 10.6 |  | P-, INE, S2S, ER, S |
+| Sundown1 | ~~N2K-C2448UPQ~~ | ~~FEX, 48x25G SFP + 6\*100G, Sundown1~~ | ~~Hakim~~ |  | ~~I~~ |  |  |  |  |
+| Sundown1 TOR/FEX | N9K-C93180YC-FX3S | 48 x 1/10/25G SFP + 6 x 40/100G, Sundown1, /w FEX mode | Elysian | [Hw Spec EDCS-13161526](https://docs.cisco.com/doclite/ui/#/results?searchType=searchMetaData&term=13161526&nodeId=) | I+B - 9.3(5) |  |  |  |  |
+| Sundown1 TOR/FEX | N9K-C93180YC-FX3 | 48 x 1/10/25G SFP + 6 x 40/100G, Sundown1, /w FEX mode | Elysian-new-PID (Same h/w as Elysian) **SUPERFUZZ**  | [Hw Spec EDCS-13161526](https://docs.cisco.com/doclite/ui/#/results?searchType=searchMetaData&term=13161526&nodeId=) | J - 10.1(1) IMR6 - 9.3(7) |  |  |  |  |
+| Sundown | N9K-C93180YC-FX3H | 24x1/10/25G SFP+, 6\*40/100G Ethernet | 24port sundown(FX3H) platform |  | nr1f |  |  | see CSCwb28754 |  |
+| Sundown1 TOR/FEX | N9K-C93108TC-FX3P | 48 x 1/10GBASET + 6 x 40/100G, Sundown1, /w FEX mode | Tecate | [EDCS-15514994](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-15514994) | I+B - 9.3(5) |  |  |  |  |
+| Sundown1 TOR | N9K-C9348GC-FX3 | Down link: 48x 100M/1G BASE-T + 4x 10/25-Gbps SFP28 uplink: 2x 40/100-Gbps QSFP28+ | Trappist | [EDCS-23467994](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-23467994) | OR1F 10.4(1) |  |  | NxOS + ACI macsec (on 6 uplink ports) **,**  POE/POE+/UPOE, not supported (as 350W PS) Pipedream -> Pipedream HD -> Trappist BV Retimer port : 49-54 | Sundown |
+| Sundown1 TOR | N9K-C9348GC-FX3PH | Downlink: 48x 10/100M/1G BASE-T (last **8 ports with half-duplex capablity**) +  4x 1/10/25-Gbps SFP28 Uplink: 2x 40/100-Gbps QSFP28 ports | TrappistHD |  | OR1F 10.4(1) |  |  | NxOS + ACI macsec (on 6 uplink ports) **PoE++ (with 1900 W PSU) on 48 ports.** **BV Retimer port : 49-54** | sundown |
+| Sundown1 TOR | N9K-C93108TC-FX3 | Downlink 48x 100M/1/10G BASE-T Uplink: 6x 40/100-Gbps QSFP28+ | Tripel |  | OR2F 10.4(2) |  |  | NxOS + ACI macsec supported Turin(EX) ->Shugga (FX) -> Tripel BV Retimer port : 49-54 |  |
+| Sundown1 TOR | N9K-C92348GC-FX3 | Down link: 48x 100M/1G BASE-T + 4x 10/25-Gbps SFP28 uplink: 2x 40/100-Gbps QSFP28+ | Trappist-Lite (thurn N9K-C92348GC-X replacement with deeper mem and storage) | [EDCS-23467994](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-23467994) | OR4M & PR2F |  |  | Lite meaning features are blocked in software (PTP, SR, VXLAN, hw telemetry...)  
+  
+inteneded to be Thurn replacement with deep mem and storage  **BV Retimer port :**  
+**49-54** |  |
+| Sundown2 TOR | N9K-C93360YC-FX3 | TOR, 96 x 25 G + 12C, Sundown2 | Kriek |  | Not Released |  |  |  |  |
+| Sundown2 TOR |  | TOR, 96T + 12C, Sundown2 | Trumer |  | Not Released |  |  |  |  |
+| Wolfridge TOR | N9K-C9316D-GX | TOR, 16 x 400G, Wolfridge | Sculpin | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-13307245) | I-Plus |  |  |  | Unknown |
+| Wolfridge TOR | N9K-C93600CD-GX | TOR, 28 x 100G + 8 x 400G, Wolfridge | Mariposa  | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-15781648) | I-Plus |  |  |  | Unknown |
+| Wolfridge TOR | N9K-C9364C-GX | TOR, 64 x 100G, Wolfridge | Redhorse | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-16300917) | I-Plus |  |  |  | Unknown |
+| Wolfridge LC | N9K-X9716D-GX | LC, 16 x 400G + 32 x 100G, 2 Wolfridge | Brasswood | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-15900614&ver=latest) | J releaseN9K-C92348GC-X  |  |  |  |  |
+| Wolfridge FM | N9K-C9504-FM-G | FM (4 Slot), 1 x Wolfridge | Mt.Brave | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-16584201&ver=latest) | J release |  |  |  |  |
+| Wolfridge FM | N9K-C9508-FM-G | FM (8 Slot), 2 x Wolfridge | Sheldon | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-18075156&ver=latest) | J release |  |  |  |  |
+| Sundown1 | ~~N9K-C93320GC-FX3P~~ N9K-C93320TC-FX3P | FedEx: Graceland + mGig, 2p IEEE POE+ 24GB Memory | Shaka |  | 5/06/2024 |  |  |  |  |
+| QuadPeaks TOR | N9K-C9364D-GX2A | ToR, 64 x 400G + 2 x 10G, QuadPeaks 25.6T | Duvel | [HW spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-18146837) | EFT in K release 10.2(1) F |  |  | 1/1-32 are MTK retimer based interfaces |  |
+| QuadPeaks TOR | N9K-C9332D-GX2B | ToR, 32 x 400G, QuadPeaks 12.8T | Coastal Fog |  [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/7566f395-bd90-49cd-a43c-1b973fba2699) | EFT in K release 10.2(1) F FCS in 10.2(1q) F |  |  | 1/25-32 are MTK retimer based interfaces |  |
+| QuadPeaks TOR | N9K-C93560LD-GX2B | TOR, 48 x SFP56, 8 x 400G, QuadPeaks 12.8T | Hofbrau |  |  |  |  |  |  |
+| QuadPeaks TOR | N9K-C9348D-GX2A | ToR, 48 x 400G + 2 x 10G, QuadPeaks 25.6T | Petrus | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-21247688) | EFT in K release 10.2(1) F |  |  | 1/1-48 are MTK retimer based interfaces |  |
+| QuadPeaks  4RU TOR  | N9K-C9408 | TOR, 4 RU, 8 x LEMs, or 4 x 400G per LEM, QuadPeaks 25.6T | Edelweiss | [HW Spec](https://docs.cisco.com/doclite/ui/#/library/80b16770-d96c-45c2-8762-9bf2699859f3) | 10.3(3) F |  |  |  |  |
+|  |  | Supervisor for Edelweiss | Ziggy (DPLL), Batanga |  |  |  |  |  |  |
+| Edelweiss LEM | N9K-X9400-16W |  16x200 LEM for Edelweiss | Spritz |  |  |  |  | Macsec Mediatek MT3722 retimer on all ports. |  |
+| Edelweiss LEM | N9K-X9400-8D | 8D LEM for Edelweiss | Yellow Bird | [EDCS-21200561](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-21200561) |  |  |  | Macsec Mediatek MT3722 retimer on all 8x400G ports. |  |
+| Edelweiss LEM |  | 12C + 4D LEM for Edelweiss | Greyhound |  |  |  |  |  |  |
+| Edelweiss (QP-based) LEM | N9K-X9400-22L | 22 50G/25G SFP56 LEM for Edelweiss | Bramble | [EDCS-24175205](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-24175205) | 3/11 |  |  | Macsec Mediatek MT3722 retimer on all 22x50G ports. (Macsec feature is Not supported yet) |  |
+| Sundown LC | N9K-X9736C-FX3 | LC 36C , 4xsundown1, Need 5 FMs | Blackbird | [EDCS-23801048](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-23801048) | PR2F (10.5(2)F) |  |  | bluewood->blackbird |  |
+|  | N9K-C93320TC-FX3P |  | Shaka |  |  |  |  |  |  |
+| Ararat TOR | N9K-C9332D-H2R | TOR, 32x400G + 2x10G, Ararat 12.8T | Einstok | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-22938258) | OR1F 10.4(1) |  |  | QSFP-DD = 400G Macsec Mediatek MT3722 retimer on all 32x400G ports. Class C Sync-E/1588 PTP on all ports. | 32GB RAM |
+| Ararat TOR | TBD | TOR, 96C+8D, Ararat 12.8T | Rogue |  |  |  |  |  |  |
+| Ararat TOR | N9K-C93640CWD-HXB | TOR, 28C+8D, Ararat 6.4 | Westmalle |  |  |  |  |  |  |
+| Ararat TOR | N9K-C9364C-H1 | TOR, 64C, Ararat 6.4 | Paulaner | [EDCS-23202726](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-23202726) | OR3F 10.4(3)F |  |  | 1/1-64 are MTK retimer based interfaces Macsec Mediatek MT3722 retimer on 49-64 |  |
+| Ararat TOR | N9K-C93400LD-H1 | TOR, 48L+4D Ararat 6.4  
+48x50G+4x400G Switch | GooseIsland | [EDCS-23502708](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-23502708) | OR2F 10.4(2) |  |  | 1/1-52 are MTK retimer based interfaces | CCO:Dec-15-2023 |
+| Ararat LC | TBD | LC, 8C+28x200G, 1 Ararat 12.8T, Need 4 FMs (Bluewood refresh) | BlueRock |  |  |  |  |  |  |
+| Ararat LC | TBD | LC, 48L+4D, 1 Ararat 12.8T, Need 4 FMs (Silvercreek refresh) | HighDive |  |  |  |  |  |  |
+| Ararat LC | TBD | LC, 24D, 2 Ararat 12.8T, Need 6 FMs | Maxville Lake |  |  |  |  |  |  |
+| Ararat FM | TBD | FM4, 1 Ararat 6.4T (CR for Mt.Brave) | Mt. Veeder |  |  |  |  |  |  |
+| Ararat FM | TBD | FM8, 1 Ararat 12.8T (CR for Sheldon) | Schramsberg |  |  |  |  |  |  |
+| Ararat FM | TBD | FM16, 2 Ararat 12.8T | ScreamingEagle |  |  |  |  |  |  |
+| Ararat+DDR5 | N9348C8D-H2 | TOR, 48x100G SFP-DD + 8x400G QSFP-DD | Darkhorse |  | QR5M |  |  |  |  |
+| Sundown+DDR5 | N9348Y6C-FX3 | 48x1/10/25G SFP + 6\*40/100G  | Superfuzz-A |  | QR5M |  |  |  |  |
+| Sundown+DDR5 | N9348G4Y2C-FX3 | 48x 10/100M/1G BASE-T HD 4x 10/25 Gbps SFP28 2x 40/100-Gbps QSFP28 | Trappist-A |  | QR5M |  |  |  |  |
+| Sundown+DDR5 | N9248G4Y2C-FX3 | 48x 10/100M/1G BASE-T HD 4x 10/25 Gbps SFP28 2x 40/100-Gbps QSFP28 | TrappistLite-A |  | QR5M |  |  |  |  |
+| Sundown-DDR5 | N9348T6C-FX3 | 48x100M/1G/10G BASE-T 6x 40/100-Gbps QSFP28 | Tripel-A |  | TBD |  |  |  |  |
+| heavenly+DDR5 | N9336C-FX2 | 36 x 100G QSFP28 | Scrimshaw-A |  | TBD |  |  |  |  |
+| ~~Barefoot Tofino TOR~~ | ~~N3K-C3464C~~ | ~~TOR, 64C 1 x Tofino64~~ | ~~Shadow Puppet~~ | [~~HW Spec~~](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/5a2bc5aa-c2b0-4b6d-8f8d-8feb30657606) |  ~~9.2(3)~~ |  |  | Never FCSed |  |
+| ~~Barefoot Tofino TOR~~ | ~~N3K-C34180YC~~ | ~~TOR, 48 \* 10/25G + 6 \* 100G 1xTofino18~~ | ~~Boddington~~ |  |  ~~9.2(2)~~ |  |  | Never FCSed |  |
+| Innovium Teralynx 7 TOR | N3K-C3408-S | TOR, 4 RU, 8 x LEMs, 16 x 100G or 4 x 400G per LEM | Chimney Rock | [HW Spec](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/5f57abe6-4c74-4644-a261-9445a3cbdd5c) | h_utopias\* |  |  | Planned GA I-Plus |  |
+| Innovium Teralynx 7 TOR | N3K-C3408-S | TOR, 4 RU, 8 x LEMs, 16 x 100G or 4 x 400G per LEM | Firestone |  | h_utopias\* |  |  | Planned GA I-Plus |  |
+| Innovium Teralynx 7 TOR | N3K-C34200YC-SM | TOR, 1 RU, 48 x 25/10G + 8 x 100/40G | Ironcity |  | h_utopias\* |  |  | TBD |  |
+| Innovium Teralynx 7 TOR | N3K-C3432D-I | TOR, 32 x 400 G + 2 x 10G | Utopias |  | h_utopias\* |  |  | Planned GA I-Plus |  |
+| Innovium Teralynx 5 TOR | N3K-C34200YC-S | TOR, 1 RU, 48 x 25/10G + 8 x 100/40G | Ironcity CR |  | J release EOS in 10.1(1) |  |  | Never FCSed |  |
+| Innovium Teralynx 5 TOR | N3K-C3432C-S | TOR, 1 RU, 32  x 100/40G + 2 x 10G | Ballast Point |  | J release EOS in 10.1(1) |  |  | Never FCSed |  |
+| Fretta Jericho LC | N9K-X9636C-R | LC, 36 x 100G, 6 x Jericho ASICs | Potenza-100 |  | 7.0(3)F1(1) | EDCS-1465722 |  |  | P+, D, PT, ER, S |
+| Fretta Jericho LC | N9K-X9636Q-R | LC, 36 x 40G, 3 x Jericho ASICs | Potenza-40 |  | 7.0(3)F1(1) | EDCS-1516866 |  |  | **?P**, D, PT, ER, S |
+| Fretta Jericho+ LC | N9K-X9636C-RX | LC, 36 x 100G, 3 x Jericho+ ASICs | Forza-100 |  | 7.0(3)F3(3) |  |  |  | P+, D, PT, ER, S |
+| Fretta Jericho+ LC | N9K-X96136YC-R | LC, 16 x 1/10G, 32 x 25G + 4 x 40/100G , Jericho+, NX-OS R-Series Line Card | Molti |  | 9.2(1) |  |  |  | P+, D, PT, ER, S |
+| Fretta Jericho2 LC | N9K-X9624D-R2 | LC, 24 x 400G Line Card | Vigor 400 |  | 10.1(2) |  |  |  |  |
+| Fretta FE3600 Fabric Card | N9K-C9508-FM-R | FM, Cell based Fabric card with 2 x FE3600 ASICs | Uluru-8 |  | 9.2(1) |  |  |  |  |
+| Fretta FE3600 Fabric Card | N9K-C9504-FM-R | FM, Cell based Fabric card with 1 x FE3600 ASIC | Uluru-4 |  | 9.2(1) |  |  |  |  |
+| Fretta FE9600 Fabric Card | N9K-C9508-FM-R2 | FM, Nexus 9508 R Series Fabric Module for 400G | Augustus 8 |  | 10.1(2) |  |  |  |  |
+| Fretta FE9600 Fabric Card | N9K-C9504-FM-R2 | FM, Nexus 9504 R Series Fabric Module for 400G | Augustus 4 |  |  |  |  |  |  |
+| Fretta Jericho+ ToR | N3K-C36180YC-R | TOR, 48 x SFP + 6C, Jericho+ and Bear Valley | Bifrost (aka Winterfell) |  | 9.2(1) | EDCS-11553436 |  |  |  |
+| Fretta Jericho+ ToR | N3K-C3636C-R | TOR, 36C with 14 MacSec Ports, Jericho+ Bear Valley | RedCastle (aka OldCastle) |  | 9.2(1) | EDCS-11553438 |  |  |  |
+| Fretta Jericho2 ToR | N3K-C36480LD-R2 | 48x50G + 6x400G Jericho2 ASIC | Brewdog |  |  |  |  |  |  |
+| White Box TOR ,32C, Tomahawk | Wedge10012VF | White Box from Accton/Facebook with BCM Tomahawk  and BMC with openBMC. 32 x 100G QSFP ports | Wedge-100 |  |  |  |  |  |  |
+| White Box TOR ,32C, Tomahawk | T7032-IX1 | White box from Quanta with Tomahawk and BMC 32 x 100G QSFP ports | Quanta IX1B |  |  |  |  |  |  |
+| White Box TOR ,32C,1 SFP+ Tomahawk | DX010 | White box from Celestica with Tomahawk. 32 x 100G QSFP ports + 1 x 10G | Celestica Seastone |  |  |  |  |  |  |
+| White Box TOR 32C, Tomahawk | 7712-32X-O-AC-B | White box from Accton/Edgecore with Tomahawk. 32 x 100G QSFP ports | Accton 7712 |  |  |  |  |  |  |
+| White Box TOR 32C, Tomahawk | 7312-54X-O-AC-B | White box from Accton/Edgecore  with Tomahawk. 48 x 25G ports + 6 x 100G QSFP ports | Accton 7312 |  |  |  |  |  |  |
+| White Box TOR 32C, Tomahawk | Z9100 | White box from dell with Tomahawk. 32 x 100G QSFP ports | Dell Z9100 |  |  |  |  |  |  |
+
+# SiliconOne code names
+
+| **ASIC**  | **Module Type** | **Model (**[**Taxanomy**](https://www.cisco.com/c/dam/en/us/td/docs/general/Illus_process/Test/html/images/501806.jpg)**)** | **Description** | **Code Name** | **HW Spec** | **FCS Version** | **Comments** | [**Troubleshooting Features**](https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/561414869/Hardware+codenames#tshoot_legend) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| NA | Chassis | N9K-C9808 | N9800 8 Slot Chassis | Mando 8 XR Codename : Spitfire-8 |  | N 10.3(1) |  |  |
+| NA | Chassis | N9K-C9804 | N9800 4 Slot Chassis | Mando 4 XR Codename : Spitfire-4 |  | O  10.4(1) |  |  |
+| NA | Supervisor Module | N9K-C9800-SUP-A | First Gen Sup for N9800 | The Child XR Codename : RP1 |  | N 10.3(1) |  |  |
+| NA | Supervisor Module | N9K-C9800-SUP-B | Second Gen Sup Broadwell DE 8C @ 2.7GHz | Grogu XR Codename: Hudson |  | Q 10.6(2) |  |  |
+| NA | Fan | N9K-C9808-FAN-A | FAN for 8 Slot Chassis | Bo Katan 8 XR Codename : 8808-FAN |  | N 10.3(1) |  |  |
+| NA | Fan | N9K-C9804-FAN-A | FAN for 4 Slot Chassis | Bo Katan 4 XR Codename : 8804-FAN |  |  |  |  |
+| Gibraltar (Q200) | Fabric Module | N9K-C9808-FM-A | FM 8-Slot, No CPU ASIC: Gibraltar (Q200) | Cara Dune 8 XR Codename : Lodestar-8 |  | N 10.3(1) |  |  |
+| Gibraltar (Q200) | Fabric Module | N9K-C9804-FM-A | FM 4-Slot, No CPU ASIC: Gibraltar (Q200) | Cara Dune 4 XR Codename : Lodestar-4 |  |  |  |  |
+| Gibraltar (Q200) | Line Card | N9K-X9836DM-A | 36D with MacSec ASIC: Gibraltar (Q200) | Moff Gideon XR Codename : Vanguard | [EDCS-22797625](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-22797625) | N 10.3(1) | All ports are CDR based and macsec support will be done via CDR. |  |
+| Gibraltar (Q200) | Line Card |  | 36D without Macsec ASIC: Gibraltor (Q200) | Axe Woves XR Codename:Lancer |  |  |  |  |
+| Gibraltar (Q200) | Line Card | N9K-X98900CD-A | 34C+14D with 16 ports MacSec ASIC: Gibraltar (Q200) | Toro Calican XR Codename : Dauntless | [EDCS-23193239](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-23193239) | O  10.4(1) |  |  |
+| Graphene (G100) | ToR (1RU) | N9K-C9232E-B1 | 32x800G ASIC: Graphene | Rochefort XR Codename : Crocodile |  | O  10.4(1) | L3 functionality only at FCS, supports 2x400G on all 32 ports or 16x800G ports on a chassis  |  |
+| Krypton (E100) |  | TBD | ASIC: Krypton | Killians |  |  |  |  |
+| Krypton (E100) | ToR | N9336C-SE1 (latest) N9K-C9336C-K1 (old) | 36C Full MacSec ASIC: Krypton Mono(No HBM) | Lakefront |  | HW FCS: 4/15  |  |  |
+| ?? | ToR | TBD | 48 x 1G/100M + 4 x 10/25G + 2 x 100G ASIC:Argon | Terrapin |  | HW FCS: 4/15  |  |  |
+| Krypton (E100) | ToR (2 RU) | N9396Y12C-SE1(latest) N9K-C93360YC-K1(old) | 96Y + 12C ASIC: Krypton | Allagash |  | 10.6(2) |  |  |
+| Krypton Lite (E104) | ToR | N9348Y12C-SE1 (latest)  
+N9K-C93280YLC-K1 (old) | 1/10/25G SFP28 + 16x 1/10/25/50G SFP28 + 12x 40/100G QSFP28  12C 48Y + 12C ASIC: Krypton L | Eastlake | [HW Spec](https://ciscoteams.atlassian.net/wiki/pages/resumedraft.action?draftId=561414869) | HW FCS: 12/23 | S1 Krypton Lite ASIC (E104) has two variants, E1 and E2 | To check ASIC variant on Eastlake switch# show sprom module 1 1 \| include 'Mfg Bits'  Mfg Bits        : 4352 (if value > 4096 it’s E2 variant else E1) |
+| Krypton (E100) | SmartTOR Fixed 1RU | N9348Y2C6D-SE1U | 48 x 25G + 2 x 100G + 6 x 400G + 2 AMD "Giglio" DPUs ASIC: Krypton | Deschutes | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-25506860) |  |  |  |
+| Krypton (E100) | SmartTOR Fixed 1RU | N9324C-SE1U | 24x 40/100GE (QSFP28) + 4 AMD "Elba" DPUs | Dansberg |  |  |  |  |
+| Graphene2 (G200) | TOR Fixed 2RU | N9364E-SG2-Q | 64 x 800G ASIC: Graphene2 | Bud Lightning XR Codename : Lightning | [HW Spec](https://docs.cisco.com/doclite/ui/#/library/f19f3b5f-c7ba-45dd-bde6-fca3ee568325) | QR3F March 2025 |  |  |
+| Graphene2 (G200) | TOR Fixed 2RU | N9364E-SG2-O | 64 x OSFP800 ASIC: Graphene2 | Optimator XR Codename: Superbolt | [HW Spec](https://docs.cisco.com/alfresco/service/url?docnum=EDCS-25312451) | QR3F March 2025 |  |  |
+| ?? | Line Card (Modular) | TBD | 36 x 800G ASIC: Palladium | Sash Ketter |  | TBD |  |  |
+| Iron  
+(F100) | Fabric Card (Modular) | N9K-C9808-FM-B | FM 8 slot based on Iron ASIC | Paz Vizsla8 |  | TBD |  |  |
+| Krypton (E100) | TOR Fixed 2RU | N9396T12C-SE1 (latest) N9K-C93216TC-K1 (old) | 96 x 10G-T + 12 x 100G ASIC: Krypton Mono (no HBM) | SpaceDust | [HW Spec](https://docs.cisco.com/alfresco/service/url?docnum=EDCS-24639741) | Q4 2024 10.6(2) |  |  |
+| Krypton (E100) | TOR with DPU | N9324C-SE1U | 24 x 100 +  4 AMD "Elba" DPUs ASIC: Krypton Mono | Dansberg (formerly known as Dixie) | [HW Spec](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-24986017) | Q2 2025 | DPU PID: 8K-DPU400-2A |  |
+| Krypton (E100) | TOR with DPU | N9348Y2C6D-SE1U |  | Deschutes |  |  | DPU PID: GIGLIO-SLED |  |
+| Graphene G200_X | TOR  
+Fixed 2RU | N9364E-SG2X-O | 2RU TOR based with 64x OSFP800 ports ASIC: Graphene200_X  | OptimatorX  XR Code Name:  
+SuperboltX | [HW Spec](https://docs.cisco.com/alfresco/service/url?docnum=EDCS-25526077) |  |  |  |
+| Graphene G200_X | TOR  
+Fixed 2RU | N9364E-SG2X-Q | 2RU TOR based with 64x QSFP-DD800 ports ASIC: Graphene200_X | Bud Lightning X  XR Code Name:  
+LightningX | [HW Spec](https://docs.cisco.com/alfresco/service/url?docnum=EDCS-23115556) |  |  |  |
+| Palladium2 (E200) | TOR  
+Fixed 3RU | N9364E-SP2R-O | 3RU TOR based on the P200 NPU with 64x OSFP800 ports | Mustang | [HW Spec](https://docs.cisco.com/alfresco/service/url?docnum=EDCS-25320734) |  |  |  |
+| Palladium2 (E200) | TOR  
+Fixed 3RU | N9364E-SP2R-Q | 3RU TOR based on the P200 NPU with 64x QSFP-DD800 ports | Titan | [HW Spec](https://docs.cisco.com/alfresco/service/url?docnum=EDCS-25766704) |  |  |  |
+| Palladium2 (E200) | Line card | N9K-X9836E-SP2R-O | Palladium2 based LC 36x800Gbe OSFP-DD800 | Razor Crest |  |  |  |  |
+| Graphene (G300) | TOR |  |  | Seafox-X |  |  | Liquid Cooled |  |
+| Graphene (G300) | TOR |  |  | Sabre |  |  | Air Cooled |  |
+| Graphene (G300 CPO) | TOR |  |  | Seafox-O |  |  | Liquid Cooled |  |
+
+# Nvidia Spectrum code names
+
+| **ASIC**  | **Module Type** | **Model (**[**Taxanomy**](https://www.cisco.com/c/dam/en/us/td/docs/general/Illus_process/Test/html/images/501806.jpg)**)** | **Description** | **Code Name** | **HW Spec** | **FCS Version** | **Comments** | [**Troubleshooting Features**](https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/561414869/Hardware+codenames#tshoot_legend) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Spectrum4 | 2 RU TOR | N9164E-NS4-O | N9164E-NS4-O 64 x 800G OSFP or 128 x 400G | Gamut |  |  |  |  |
+| Spectrum6 | 2RU TOR |  | N9164F-NS6-O?  | Prism |  |  | Liquid Cooled |  |
+
+# N3k code names
+
+| **Type, Ports** | **Model** | **Description** | **Code Name** | **HW spec** | **FCS Version** | **N3K modes in Camden onwards** | [**Troubleshooting Features**](https://ciscoteams.atlassian.net/wiki/spaces/NEXUS9K/pages/561414869/Hardware+codenames#tshoot_legend) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| ToR, 16 x 40G | N3K-C3016Q-40GE | 1 T+ | QuickGold |  | EOS in 10.1(1) | YN3K only – (no option to switch to n9k) |  |
+| ToR, 48 x 1G + 4 x 10G | N3K-C3048TP-1GE | 1 T+ | QuickCopper |  | EOS in 10.1(1) | YN3K only – (no option to switch to n9k) |  |
+| ToR, 48 x 10G + 4 x 40G | N3K-C3064PQ-10GE | 1 T+ | QuickSilverPlus |  | EOS in 10.1(1) | YN3K only – (no option to switch to n9k) |  |
+| ToR, 48 x 10G + 4 x 40G | N3K-C3064PQ-10GX | 1 T+ | QuickIron |  | EOS in 10.1(1) | YN3K only – (no option to switch to n9k) |  |
+| ToR, 48 x 10G + 4 x 40G | N3K-C3064T-10GT | 1 T+ | QuickZinc |  | EOS in 10.1(1) | YN3K only – (no option to switch to n9k) |  |
+| ToR, 32 x 40G | N3K-C3132Q-40GE | 1 T2 | Neptune |  | EOS in 10.1(1) | Y |  |
+|  | N3K-C3132Q-X/N3K-C3132Q-XL |  | NeptuneCR NeptuneCR2 |  | EOS in 10.1(1) | Y |  |
+| ToR, 48 x 10G + 6 x 40G | N3K-C3172PQ-10GE | 1 T2 | QuickIron2 |  | EOS in 10.1(1) | Y |  |
+| ToR, 48 x 10G + 6 x 40G | N3K-C3172PQ-10GE | 1 T2 | QuickIron2-CR |  | EOS in 10.1(1) | Y |  |
+| ToR, 48 x 10G + 6 x 40G | N3K-C3172TQ-10GT | 1 T2 | QuickZinc2 |  | EOS in 10.1(1) | Y |  |
+| ToR, 48 x 10G | N3K-C3548P-10G | 1 Cisco Monticello | Collina |  | EOS in 10.1(1) | Y N3K only – (no option to switch to n9k) |  |
+| ToR, 48 x 10G | N3K-C3548P-10GX | 1 Cisco MonticelloCR | Collina2 |  | I7(2) | Y N3K only – (no option to switch to n9k) |  |
+| ToR, 48 x 10G | N3K-C3548P-XL | 1 Cisco MonticelloCR | Collina2-XL |  | I7(2) | Y N3K only – (no option to switch to n9k) |  |
+| ToR, 32 x 40G | N3K-C3132Q-V | 1 T2P | Niagara Falls |  | EOS in 10.1(1) | N |  |
+| ToR, 48 x 1/10G SFP+ 6 x 40/100G | N3K-C31108PC-V | 1 T2P | Paris | [EDCS-153068](https://docs.cisco.com/share/proxy/alfresco/url?docnum=EDCS-1530681&ver=latest) | EOS in 10.1(1) | N | supports secure boot |
+| ToR, 48 x 1/10G-T 6 x 40/100G (10G-T RJ45) | N3K-C31108TC-V | 1 T2P | Berlin | [EDCS-1537964](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/e8c296cb-5136-4a92-a93b-0fd0d5e09676) | EOS in 10.1(1) | N | supports secure boot |
+| ToR, 48 x 10/25G + 6 x 100G | N3K-C36180YC-R | Jericho+ | Bifrost |  | Hamilton | N |  |
+| ToR, 36 x 100G | N3K-C3636C-R | Jericho+ | Redcastle |  | Hamilton | N |  |
+| ToR, 64 x 100G | N3K-C3264C-E  | Tetley  (1x TH2 /56970) | Tetley |  | H, g_tetley EOS in 10.1(1) | N EoS: February 25, 2023 EoVSS: February 24, 2025 LDOS:February 28, 2027 | supports secure boot |
+| ToR, 32 x 100G + 2 SFP+ | N3K-C3132C-Z | Haggan (1 x T3 /56870) | Haggan |  | Hamilton MR1 9.2(2) EOS in 10.1(1) | N |  |
+| ?, 48T + 4F + 2C |  | TD3-X3 | Tuborg |  |  |  |  |
+| ?, 48F + 6C |  | TD3-X5 | Rheingold |  |  |  |  |
+| Modular, 32 x 400G/128 x 100G | N3K-C3408-S | Innovium Teralynx | Chimney Rock |  | EOS in 10.1(1) |  |  |
+| Modular, 32 x 400G/128 x 100G | N3K-C3408-S | Innovium Teralynx B0 | Firestone | [EDCS-15877108](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/01a1bb21-f971-449a-9c3c-b8cff2073101) | EOS in 10.1(1) |  |  |
+| LEM, 16 x 100G LEM | NXM-X16C | Chimney Rock / Firestone 100G LEM | Stag’s Leap |  |  |  |  |
+| LEM, 4 x 400G | NXM-X4D | Chimney Rock / Firestone 400G LEM | Flying Horse |  |  |  |  |
+| ToR, 48 x 10/25G + 8 x 100G | N3K-C34200YC-SM | Innovium Teralynx | Ironcity | [EDCS-15945729](https://docs.cisco.com/share/page/site/nextgen-edcs/document-details?nodeRef=workspace://SpacesStore/38c6e212-fa77-485c-a687-6d785cade4d7) | EOS in 10.1(1) |  |  |
+| ToR 64x40G | N3K-C3264Q | Tomahawk | Nanook |  | EOS in 10.1(1) |  | supports secure boot |
+| ToR 32x100G | N3232C | Tomahawk | Havasu |  | EOS in 10.1(1) |  | supports secure boot |
+| TOR 48xSFP28 + 4QSFP | TBD | Ultra Low Latency switch  | Exablaze Fusion2 |  | FCS Target: Nov 2022 |  |  |
+
+# ASIC code names
+
+| **Codename** | **Comments/Common Name** |
+| --- | --- |
+| Lacrosse | Tahoe family - The chip is assembled with 6 slices, where each slice can support a maximum of 900 Mpps/600Gbps of bandwidth @ 965Mhz |
+| Davos | Tahoe family - Davos is equivalent to Lacrosse in terms of features with the exception that Lacrosse has IPnIP tunnel support which Davos does not have and Davos has a FlowTable which Lacrosse does not have.  From a packet forwarding functionality perspective, Davos and Lacrosse are equivalent.   The chip is assembled with 2 slices and can support multiple modes 900 Mpps/600Gbps of bandwidth @ 1.020Ghz 1050 Mpps/700Gpbs of bandwidth @ 1.1Ghz |
+| Sugarbowl | Tahoe family - Sugarbowl is a super-set of Lacrosse and Davos. Besides ACI Leaf and stand-alone ToR, Sugarbowl supports 8 unified ports (native Fibre Channel or Ethernet front-panel ports) and FEX functionality (attached to a FEX parent switch via VNTAG interfaces.)  |
+| Homewood  | Rocky Family ASIC 18x100G |
+| BigSky | Rocky Family ASIC 64x100G - No breakout |
+| Heavenly | Rocky Family ASIC 36x100G |
+| Sundown | Rocky Family ASIC 18 or 36x100G |
+| Wolfridge | Appalachia Family ASIC. 16x400G |
+| QuadPeak | Chopaka Family ASIC 12.8T (32x400G). 25.6T (64x400G) |
+| Ararat | Chopaka Family ASIC 6.4T(16x400G), 12.8T (32x400G) |
+| BCM56850 | Trident2, T2 |
+| BCM56852 | T2 - 960G version |
+| BCM56854 | T2 - 720G version |
+| BCM56960 | Tomahawk |
+| BCM84848 | Copper Phy for 10Gbase-T (4 ports) |
+| BCM56970 | Tomahawk-2 |
+| BCM56870 | Trident-3 |
+| BCM84328 | 2x40G retimer. Also supports 8x10G retimer mode. |
+| BCM84858/BCM84858R | CR version of BCM84848 (copper Phy for 10g base-T) |
+| BCM56044 | Ranger+ ASIC |
+| BCM56640 | Triumph3 ASIC (Ranger+ predecessor with) |
+| BCM84794 (8479X) | 100G gearbox (10x10G to 4x25G) |
+| BCM82381 | Furia retimer (2x100G) |
+| BCM82391 | Macsec (2x100G similar to Furia) |
+| BCM82764 | Sesto Gearbox (2x20G to 4x10G reverse gearbox) |
+| DS100DF410 | TI retimer 10G |
+| DS125MB203 | TI Mux (2 x 12.5g Lanes MUX. Used in Modular) |
+| Jericho | 6x100G |
+| Jericho+ | 9x100G (core 0 and 1 with combination of 4 and 5 ports in each core. 450G /core) |
+| Jericho2 | 12x400G |
+| Spectrum 4 | Nvidia Mellanox Spectrum 4 ASIC . 64 x 800G OSFP or 128 x 400G |
+
+# N2k code names
+
+| **Module Type** | **Model** | **Asic** | **Codename** |
+| --- | --- | --- | --- |
+| 48 x 1GT + 4 x 10G uplink | N2K-C2148T-1GE | 6 Redwood | Klamath |
+| 48 x 1GT + 4 x 10G uplink | N2K-C2248TP-1GE | 1 Portola | Astoria |
+| 24 x 1GT + 4 x 10G uplink | N2K-C2224TP-1GE | 1 Portola | Astoria-24 |
+| 48 x 1GT + 4 x 10G uplink | N2K-C2248TP-E-1GE | 1 Princeton | Crystal Bay |
+| 32 x 10G + 8 x 10G uplink | N2K-C2232PP-10GE | 1 Woodside | Tahoe City |
+| 32 x 10GT + 8 x 10G uplink | N2K-C2232TM-10GE | 1 Woodside | Zephyr |
+| 32 x 10GT + 8 x 10G uplink | N2K-C2232TM-E-10GE | 1 Woodside + 1 Belmont | Zephyr VE |
+| 48 x 1G + 4 x 40G uplink | N2K-C2248PQ-10GE | 1 Woodside + 1 Belmont | SpringCreek |
+| 48 x 10G + 6 x 40G uplink | N2K-C2348UPQ | Tiburon | Sunnyside |
+| 48 x 10GT + 6 x 40G uplink | N2K-C2348TQ | Tiburon | BBC |
+| 32 x 10GT + 40G uplink | N2K-C2332TQ-10GE | Tiburon | Twinpeak |
+| 48 x 10GT+ 6 x 40g uplink | N2K-C2348TQ-E | Tiburon | Maywood |
+| ? | N2K-2448UPQ | Sundown 2 | Elysian |
+
+# N9k not supported on standalone + on-hold cards
+
+| **Module Type** | **Model** | **comments** | **Code Name** |
+| --- | --- | --- | --- |
+| 48 x 1/10G Ethernet Module | N9K-9548PX | Not in plan | Blackcomb Lite |
+| 48 x 1/10G base-T Ethernet Module | N9K-9548TX | Not in plan | Cypress Lite |
+| 36p x 40G Ethernet Module | N9K-X9736PQ(armv7l) | ACI only | Whistler |
+|  | N9K-X9612PC-CXP | 100G LC (3xT2, 12xMac chip) \_on hold\_ | Albertville |
+|  | N9K-X9612PC-QSFP | 100G LC (3xT2, 12xMac, 12xgearbox) \_on hold\_ | Arrowhead |
+|  | UCS-FI-6332Q | 2RU TOR, QSFPx20 + GEM for UCS | LilleHammer |
+| 36 x 40G | N9K-X9536PQ2 | Boreal based 36X40G LC(2xT2 2xBo) | Morgins |
+| 48 x 10GT + 4 x 40G | N9K-X9564TX2 | Boreal based 48X10GT+ 4X40G (2xT2 2xBo) | Charmey |
+| 48 x 10GF+ 4 x 40G | N9K-X9564PX2 | Boreal based 48X10GF+ 4X40G (2xT2 2xBo) | Bosco |
+| 36p x 40G Ethernet Switch | N9K-C9336PQ | ACI only | Cortina 1 |
+| 48 x 1/10G Ethernet Module | N9K-X9548PX | Some time in Future | BlackcombCR |
+| 48 x 1/10G base-T Ethernet Module | N9K-X9548TX | Some time in Future | CypressCR |
+| LAC + Sugarbowl Big 72 100G TOR | 72C, 2LAC + 8SB | Grand Teton |  |
+
+#   
+Troubleshooting tools legend
+
+| **Symbol** | **Meaning** |
+| --- | --- |
+| INE | ELAM (ingress) |
+| EGE | ELAM (egress) |
+| EGE\* | ELAM (egress) + requires bufferboost |
+| INE\* | ELAM (ingress) + requires bufferboost |
+| P+ | PACL (TCAM carved by default) |
+| P- | PACL (TCAM needs carving + module reload) |
+| P | PACL |
+| S2S | Span to SUP |
+| D | Dmirror |
+| PT | Packet Tracer |
+| ER | ERSPAN |
+| S | SPAN |
+| ? | Anything starting with ? (e.g. ?INE) is unknown |
+
+**List of 3rd party platforms supported in NxOS (from platform/sup_platform_mgr.h)**
+
+#define FOSTERS_CHASSIS_STR_UI    "Nexus9000 C93180LC-EX Chassis"
+
+#define S6010_CHASSIS_STR_UI      "DELL TOR S6010-ON Chassis" /\* DELL TOR White box\*/
+
+#define S4048_CHASSIS_STR         "S4048-ON" /\* DELL TOR White box \*/
+
+#define S4048_CHASSIS_STR_UI      "DELL TOR S4048-ON Chassis" /\* DELL TOR White box \*/
+
+#define Z9100_CHASSIS_STR_UI      "DELL TOR Z9100-ON Chassis" /\* DELL TOR White box \*/
+
+#define WEST_LAKE_CHASSIS_STR_UI  "Nexus9000 C92300YC Chassis"
+
+#define SEASTONE_CHASSIS_STR_UI   "Celestica Seastone DX010 TOR Chassis" /\* FB TOR Wedge100 White box \*/
+
+#define TOR_WBOX_CHASSIS_STR_UI   "Thirdparty TOR Chassis" /\* FB TOR Wedge100 White box \*/
+
+#define BMSIX1_CHASSIS_STR_UI     "Thirdparty TOR Chassis" /\* QUANTA TOR White box \*/
+
+#define WEDGE40_CHASSIS_STR_UI    "WEDGE-40 Chassis"     /\* FB TOR Wedge White box\*/
+
+#define WEDGE100_CHASSIS_STR_UI   "WEDGE-100 Chassis" /\* FB TOR Wedge100 White box \*/
+
+#define AS7712_CHASSIS_STR_UI     "Accton 7712 TOR Chassis" /\* TOR Accton AS7712 White box \*/
+
+#define AS7312_CHASSIS_STR_UI     "Accton 7312 TOR Chassis" /\* TOR Accton AS7312 White box \*/
+
+#define REDSTONE_CHASSIS_STR_UI   "Celestica Redstone D2062 TOR Chassis" /\* TOR Celestica Redstone DP-2062 White box \*/
+
+‌

@@ -1,0 +1,44 @@
+Kernel -> URIB route-sync datapath
+
+  Linux kernel FIB (per-VRF netns)
+    |  NETLINK_ROUTE multicast: RTM_NEWROUTE / RTM_DELROUTE
+    v
+  nl_sock (one per netns, in nl_sock_list)
+    |
+    v
+  kfib_wait_for_ip_input()   select() over all nl_sock fds
+    |
+    v
+  kfib_nl_kernel_read()      recvmsg + NLMSG_OK / NLMSG_NEXT iterate
+    |
+    v
+  kfib_nl_info_fetch()       drop if snl.nl_pid != 0 (non-kernel);
+    |                        switch(nlmsg_type)
+    v
+  kfib_nl_route_change()     (RTM_NEWROUTE / RTM_DELROUTE)
+    |
+    v
+  == filters ==============================================================
+    |                                          |
+    | drop                                     | accept
+    v                                          v
+  ignore:                                  kfib_nl_parse_rtattr()
+   non-UNICAST, RTM_F_CLONED,               extract RTA_DST / GATEWAY /
+   RTPROT_REDIRECT,                         OIF / PREFSRC / PRIORITY
+   RTPROT_BIRD (urib-injected),                |
+   src_len != 0,                               v
+   table != RT_TABLE_MAIN,        +------------+-----------------------------+
+   RT_SCOPE_LINK                  |            |                             |
+                          NEWROUTE|      DELROUTE|            NEWROUTE + RTA_MULTIPATH
+                          !MULTIPATH|            |                           |
+                                   v            v                           v
+                    kfib_urib_add_one_route  kfib_urib_del_one_route   log "Got a multipath
+                                   |            |                      route" (TODO, dropped)
+                                   v            v
+                        lnx ifindex -> NXOS ifindex -> IOD  (see ifindex/IOD diagram)
+                                   |
+                                   v
+                    urib_add_one_route / urib_delete_one_route (urib_pib_hdl)
+                                   |
+                                   v
+                            URIB process (out of scope)
